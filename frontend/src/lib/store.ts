@@ -15,6 +15,7 @@ import type {
   AccessPermission,
   EmployeeAccess,
 } from "@/types";
+import { canEditRecord, canDeleteRecord, canManageEmployees } from "@/lib/permissions";
 
 export interface CrmState {
   employees: Employee[];
@@ -62,6 +63,12 @@ function subscribe(cb: () => void) {
 
 const getSnapshot = () => state;
 
+export const getCurrentUser = (): Employee | null => {
+  if (typeof window === "undefined") return null;
+  const id = localStorage.getItem("st-crm-user");
+  return state.employees.find((e) => e.id === id) || null;
+};
+
 /** Whole-store subscription — the snapshot object identity is stable between writes. */
 export function useCrm(): CrmState {
   return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
@@ -77,9 +84,15 @@ export const crm = {
     set({ leads: [lead, ...state.leads] });
   },
   updateLead(id: string, patch: Partial<Lead>) {
+    const user = getCurrentUser();
+    const lead = state.leads.find((l) => l.id === id);
+    if (!canEditRecord(user, lead)) return;
     set({ leads: state.leads.map((l) => (l.id === id ? { ...l, ...patch } : l)) });
   },
   deleteLead(id: string) {
+    const user = getCurrentUser();
+    const lead = state.leads.find((l) => l.id === id);
+    if (!canDeleteRecord(user, lead)) return;
     set({
       leads: state.leads.filter((l) => l.id !== id),
       followUps: state.followUps.filter((f) => f.relatedId !== id),
@@ -151,9 +164,15 @@ export const crm = {
     set({ customers: [customer, ...state.customers] });
   },
   updateCustomer(id: string, patch: Partial<Customer>) {
+    const user = getCurrentUser();
+    const customer = state.customers.find((c) => c.id === id);
+    if (!canEditRecord(user, customer)) return;
     set({ customers: state.customers.map((c) => (c.id === id ? { ...c, ...patch } : c)) });
   },
   deleteCustomer(id: string) {
+    const user = getCurrentUser();
+    const customer = state.customers.find((c) => c.id === id);
+    if (!canDeleteRecord(user, customer)) return;
     set({
       customers: state.customers.filter((c) => c.id !== id),
       orders: state.orders.filter((o) => o.customerId !== id),
@@ -166,14 +185,22 @@ export const crm = {
     set({ orders: [order, ...state.orders] });
   },
   updateOrder(id: string, patch: Partial<Order>) {
+    const user = getCurrentUser();
+    const order = state.orders.find((o) => o.id === id);
+    if (!canEditRecord(user, order)) return;
     set({ orders: state.orders.map((o) => (o.id === id ? { ...o, ...patch } : o)) });
   },
   deleteOrder(id: string) {
+    const user = getCurrentUser();
+    const order = state.orders.find((o) => o.id === id);
+    if (!canDeleteRecord(user, order)) return;
     set({ orders: state.orders.filter((o) => o.id !== id) });
   },
 
   /* ---------------- employees ---------------- */
   addEmployee(employee: Employee) {
+    const user = getCurrentUser();
+    if (!canManageEmployees(user)) return;
     set({
       employees: [employee, ...state.employees],
       employeeAccess: [
@@ -187,9 +214,14 @@ export const crm = {
     });
   },
   updateEmployee(id: string, patch: Partial<Employee>) {
+    const user = getCurrentUser();
+    if (!user || (!canManageEmployees(user) && user.id !== id)) return;
     set({ employees: state.employees.map((e) => (e.id === id ? { ...e, ...patch } : e)) });
   },
   deleteEmployee(id: string, transferToId?: string) {
+    const user = getCurrentUser();
+    if (!canManageEmployees(user)) return;
+    
     let nextLeads = state.leads;
     let nextCustomers = state.customers;
     let nextOrders = state.orders;
@@ -232,12 +264,21 @@ export const crm = {
     set({ followUps: [followUp, ...state.followUps] });
   },
   updateFollowUp(id: string, patch: Partial<FollowUp>) {
+    const user = getCurrentUser();
+    const followUp = state.followUps.find((f) => f.id === id);
+    if (!canEditRecord(user, followUp)) return;
     set({ followUps: state.followUps.map((f) => (f.id === id ? { ...f, ...patch } : f)) });
   },
   deleteFollowUp(id: string) {
+    const user = getCurrentUser();
+    const followUp = state.followUps.find((f) => f.id === id);
+    if (!canDeleteRecord(user, followUp)) return;
     set({ followUps: state.followUps.filter((f) => f.id !== id) });
   },
   completeFollowUp(id: string) {
+    const user = getCurrentUser();
+    const followUp = state.followUps.find((f) => f.id === id);
+    if (!canEditRecord(user, followUp)) return;
     set({
       followUps: state.followUps.map((f) => (f.id === id ? { ...f, status: "Completed" } : f)),
     });

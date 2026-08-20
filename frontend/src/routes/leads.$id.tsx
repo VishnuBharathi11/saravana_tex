@@ -22,6 +22,7 @@ import { useRequireAuth } from "@/hooks/use-require-auth";
 import { crm, nameOf, useCrm } from "@/lib/store";
 import { toast } from "sonner";
 import type { Lead, LeadStatus } from "@/types";
+import { canEditRecord, canDeleteRecord } from "@/lib/permissions";
 
 export const Route = createFileRoute("/leads/$id")({
   head: () => ({
@@ -130,7 +131,7 @@ function LeadDetail() {
                   <X className="size-4" /> Cancel
                 </Button>
               </>
-            ) : (
+            ) : canEditRecord(user, lead) ? (
               <>
                 <Button
                   variant="outline"
@@ -150,15 +151,17 @@ function LeadDetail() {
                   <UserCheck className="size-4" />
                   {lead.convertedCustomerId ? "Converted" : "Convert to Customer"}
                 </Button>
-                <Button
-                  variant="ghost"
-                  className="gap-2 rounded-xl text-destructive"
-                  onClick={() => setConfirmDelete(true)}
-                >
-                  <Trash2 className="size-4" />
-                </Button>
+                {canDeleteRecord(user, lead) && (
+                  <Button
+                    variant="ghost"
+                    className="gap-2 rounded-xl text-destructive"
+                    onClick={() => setConfirmDelete(true)}
+                  >
+                    <Trash2 className="size-4" />
+                  </Button>
+                )}
               </>
-            )
+            ) : null
           }
         />
 

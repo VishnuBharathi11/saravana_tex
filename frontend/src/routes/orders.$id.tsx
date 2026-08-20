@@ -10,6 +10,7 @@ import { useRequireAuth } from "@/hooks/use-require-auth";
 import { crm, nameOf, useCrm } from "@/lib/store";
 import { inr } from "@/data/mock";
 import { toast } from "sonner";
+import { canEditRecord, canDeleteRecord } from "@/lib/permissions";
 
 export const Route = createFileRoute("/orders/$id")({
   head: () => ({
@@ -68,24 +69,28 @@ function OrderDetailPage() {
           title={order.invoiceNumber}
           subtitle={`${order.customerName} · ${order.company}`}
           actions={
-            <>
-              <Button
-                size="sm"
-                variant="outline"
-                className="glass-soft gap-1.5 rounded-xl border-0"
-                onClick={() => navigate({ to: "/orders/$id/edit", params: { id: order.id } })}
-              >
-                <PencilLine className="size-3.5" /> Edit
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="gap-1.5 rounded-xl text-destructive"
-                onClick={() => setConfirmDelete(true)}
-              >
-                <Trash2 className="size-3.5" /> Delete
-              </Button>
-            </>
+            canEditRecord(user, order) ? (
+              <>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="glass-soft gap-1.5 rounded-xl border-0"
+                  onClick={() => navigate({ to: "/orders/$id/edit", params: { id: order.id } })}
+                >
+                  <PencilLine className="size-3.5" /> Edit
+                </Button>
+                {canDeleteRecord(user, order) && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="gap-1.5 rounded-xl text-destructive"
+                    onClick={() => setConfirmDelete(true)}
+                  >
+                    <Trash2 className="size-3.5" /> Delete
+                  </Button>
+                )}
+              </>
+            ) : null
           }
         />
 

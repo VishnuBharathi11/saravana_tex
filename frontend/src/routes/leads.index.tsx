@@ -1,25 +1,22 @@
 import { useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Plus } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/common/glass";
 import { StatusChip } from "@/components/common/status-chip";
 import { DataTable, type Column } from "@/components/common/data-table";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useRequireAuth } from "@/hooks/use-require-auth";
-import { employeeName, employees, leads } from "@/data/mock";
+import { useCrm } from "@/lib/store";
+import { employeeName, employees } from "@/data/mock";
 import type { Lead } from "@/types";
 
 export const Route = createFileRoute("/leads/")({
   head: () => ({
     meta: [
       { title: "Leads · Saravana Traders CRM" },
-      {
-        name: "description",
-        content: "Track every enquiry and lead with filters, sorting and export.",
-      },
-      { property: "og:title", content: "Leads · Saravana Traders CRM" },
-      { property: "og:description", content: "Full lead register for the sales team." },
+      { name: "description", content: "Track every enquiry and lead." },
     ],
   }),
   component: LeadsPage,
@@ -39,29 +36,27 @@ function Avatar({ name }: { name: string }) {
 
 function LeadsPage() {
   const user = useRequireAuth();
-  const navigate = useNavigate();
-  const [status, setStatus] = useState("All");
-  const [emp, setEmp] = useState("All");
-  const [source, setSource] = useState("All");
+  const navigate = useNavigate({ from: Route.fullPath });
+  const [leadStatus, setLeadStatus] = useState("All");
+  const [leadEmp, setLeadEmp] = useState("All");
+  const [leadSearch, setLeadSearch] = useState("");
 
   if (!user) return null;
   const isAdmin = user.role === "Admin";
 
-  const scoped = isAdmin ? leads : leads.filter((l) => l.employeeId === user.id);
-  const rows = scoped.filter(
+  const { leads } = useCrm();
+
+  const leadRows = leads.filter(
     (r) =>
-      (status === "All" || r.status === status) &&
-      (emp === "All" || employeeName(r.employeeId) === emp) &&
-      (source === "All" || r.source === source),
+      (leadStatus === "All" || r.status === leadStatus) &&
+      (leadEmp === "All" || employeeName(r.employeeId) === leadEmp) &&
+      (!leadSearch || 
+        `${r.name} ${r.company} ${r.phone} ${r.email}`.toLowerCase().includes(leadSearch.toLowerCase())
+      ),
   );
 
-  const columns: Column<Lead>[] = [
-    {
-      key: "avatar",
-      header: "Profile",
-      value: (r) => r.name,
-      render: (r) => <Avatar name={r.name} />,
-    },
+  const leadColumns: Column<Lead>[] = [
+    { key: "avatar", header: "Profile", value: (r) => r.name, render: (r) => <Avatar name={r.name} /> },
     { key: "name", header: "Name", render: (r) => <span className="font-medium">{r.name}</span> },
     { key: "company", header: "Company" },
     { key: "phone", header: "Phone" },
@@ -77,20 +72,9 @@ function LeadsPage() {
     { key: "createdAt", header: "Created" },
   ];
 
-  const filters = [
-    {
-      label: "Status",
-      options: ["New", "Contacted", "Interested", "Negotiation", "Converted", "Lost"],
-      value: status,
-      onChange: setStatus,
-    },
-    { label: "Employee", options: employees.map((e) => e.name), value: emp, onChange: setEmp },
-    {
-      label: "Source",
-      options: ["Website", "Referral", "Walk-in", "Exhibition", "Cold Call", "IndiaMART"],
-      value: source,
-      onChange: setSource,
-    },
+  const leadFilters = [
+    { label: "Status", options: ["New", "Contacted", "Interested", "Negotiation", "Converted", "Lost"], value: leadStatus, onChange: setLeadStatus },
+    { label: "Employee", options: employees.map((e) => e.name), value: leadEmp, onChange: setLeadEmp },
   ];
 
   return (
@@ -99,7 +83,7 @@ function LeadsPage() {
         <PageHeader
           title="Leads"
           subtitle={
-            isAdmin ? `${scoped.length} leads across the organisation` : "Leads assigned to you"
+            isAdmin ? `Manage ${leads.length} leads` : `View records (Edit assigned only)`
           }
           actions={
             <Button className="gap-2 rounded-xl" onClick={() => navigate({ to: "/leads/new" })}>
@@ -108,14 +92,24 @@ function LeadsPage() {
           }
         />
 
-        <DataTable
-          rows={rows}
-          columns={columns}
-          rowKey={(r) => r.id}
-          searchPlaceholder="Search leads by name, company, phone…"
-          filters={filters}
-          onRowClick={(r) => navigate({ to: "/leads/$id", params: { id: r.id } })}
-        />
+        <div className="m-0 space-y-4">
+          <div className="relative max-w-md">
+            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input 
+              placeholder="Search leads by name, company, phone, email..." 
+              value={leadSearch}
+              onChange={(e) => setLeadSearch(e.target.value)}
+              className="pl-9 h-10 bg-white/70"
+            />
+          </div>
+          <DataTable
+            rows={leadRows}
+            columns={leadColumns}
+            rowKey={(r) => r.id}
+            filters={leadFilters}
+            onRowClick={(r) => navigate({ to: "/leads/$id", params: { id: r.id } })}
+          />
+        </div>
       </div>
     </AppShell>
   );

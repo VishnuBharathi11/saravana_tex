@@ -140,7 +140,7 @@ const slug = (n: string) => n.toLowerCase().replace(/[^a-z]/g, ".");
 
 export const employees: Employee[] = Array.from({ length: 25 }, (_, i) => {
   const n = name();
-  const role: Role = i === 0 ? "Admin" : i < 4 ? "Sales Coordinator" : "Employee";
+  const role: Role = i === 0 ? "Admin" : "Employee";
   return {
     id: `EMP-${String(i + 1).padStart(3, "0")}`,
     name: n,
@@ -150,12 +150,8 @@ export const employees: Employee[] = Array.from({ length: 25 }, (_, i) => {
     status: rand() > 0.12 ? "Active" : "Inactive",
     createdAt: shiftDate(-int(60, 900)),
     avatarHue: int(120, 260),
-    designation:
-      role === "Admin"
-        ? "Managing Director"
-        : role === "Sales Coordinator"
-          ? "Sales Coordinator"
-          : "Sales Executive",
+    designation: role === "Admin" ? "Managing Director" : "Sales Executive",
+    about: "Handling industrial material sales across Coimbatore and Erode regions.",
   };
 });
 

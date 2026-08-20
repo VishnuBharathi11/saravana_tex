@@ -107,7 +107,7 @@ function EmployeesPage() {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {["Employee", "Sales Coordinator", "Admin"].map((r) => (
+            {["Employee", "Admin"].map((r) => (
               <SelectItem key={r} value={r}>
                 {r}
               </SelectItem>
@@ -197,7 +197,7 @@ function EmployeesPage() {
           filters={[
             {
               label: "Role",
-              options: ["Admin", "Sales Coordinator", "Employee"],
+              options: ["Admin", "Employee"],
               value: role,
               onChange: setRole,
             },

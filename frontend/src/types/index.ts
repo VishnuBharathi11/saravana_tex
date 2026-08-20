@@ -1,4 +1,4 @@
-export type Role = "Admin" | "Sales Coordinator" | "Employee";
+export type Role = "Admin" | "Employee";
 
 export type LeadStatus = "New" | "Contacted" | "Interested" | "Negotiation" | "Converted" | "Lost";
 export type OrderStatus =
@@ -18,6 +18,7 @@ export interface Employee {
   createdAt: string;
   avatarHue: number;
   designation: string;
+  about?: string;
 }
 
 export interface Lead {

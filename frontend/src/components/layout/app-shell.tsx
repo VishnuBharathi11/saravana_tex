@@ -135,7 +135,7 @@ function GlobalSearch() {
       )
       .slice(0, 3)
       .forEach((o) =>
-        out.push({ label: `${o.invoiceNumber} · ${o.customerName}`, kind: "Order", to: "/orders" }),
+        out.push({ label: `${o.invoiceNumber} · ${o.customerName}`, kind: "Order", to: `/orders/${o.id}` }),
       );
     employees
       .filter((e) => e.name.toLowerCase().includes(term))

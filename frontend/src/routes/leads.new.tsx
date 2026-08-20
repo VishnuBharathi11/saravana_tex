@@ -3,6 +3,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, CalendarPlus, Save, Search } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/common/glass";
+import { CustomerLeadSearch } from "@/components/common/customer-lead-search";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -37,16 +38,11 @@ const DURATIONS = ["Immediate", "1 Week", "2 Weeks", "1 Month", "Quarterly"];
 function NewLead() {
   const user = useRequireAuth();
   const navigate = useNavigate();
-  const [query, setQuery] = useState("");
   const [saved, setSaved] = useState(false);
 
   if (!user) return null;
 
-  const matches = query.trim()
-    ? customers
-        .filter((c) => `${c.name} ${c.company}`.toLowerCase().includes(query.toLowerCase()))
-        .slice(0, 5)
-    : [];
+
 
   return (
     <AppShell>
@@ -62,29 +58,16 @@ function NewLead() {
 
         <div className="glass rounded-2xl p-4">
           <Label>Search existing customer</Label>
-          <div className="relative mt-1.5">
-            <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
+          <div className="mt-1.5">
+            <CustomerLeadSearch
+              value={null}
+              onChange={(id) => {
+                if (id) navigate({ to: "/customers/$id", params: { id } });
+              }}
+              typeFilter="Customer"
               placeholder="Type a customer or company name…"
-              className="glass-soft h-10 border-0 pl-9"
             />
           </div>
-          {matches.length > 0 && (
-            <div className="mt-2 space-y-1">
-              {matches.map((c) => (
-                <button
-                  key={c.id}
-                  onClick={() => navigate({ to: "/customers/$id", params: { id: c.id } })}
-                  className="flex w-full items-center justify-between rounded-lg bg-white/60 px-3 py-2 text-left text-sm hover:bg-mint/35"
-                >
-                  <span>{c.name}</span>
-                  <span className="text-xs text-muted-foreground">{c.company}</span>
-                </button>
-              ))}
-            </div>
-          )}
         </div>
 
         <form

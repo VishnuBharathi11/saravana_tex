@@ -20,6 +20,7 @@ import { toast } from "sonner";
 import { inr } from "@/data/mock";
 import { TEXTILE_TYPES, TEXTILE_UNITS } from "@/lib/constants";
 import type { Order, OrderStatus, PaymentStatus } from "@/types";
+import { canEditRecord } from "@/lib/permissions";
 
 export const Route = createFileRoute("/orders/$id/edit")({
   head: () => ({
@@ -68,6 +69,19 @@ function OrderEdit() {
       <AppShell>
         <div className="glass rounded-2xl p-8 text-center">
           <p className="text-sm text-muted-foreground">Order not found.</p>
+          <Button variant="link" onClick={() => navigate({ to: "/orders" })}>
+            Back to orders
+          </Button>
+        </div>
+      </AppShell>
+    );
+  }
+  
+  if (!canEditRecord(user, order)) {
+    return (
+      <AppShell>
+        <div className="glass rounded-2xl p-8 text-center">
+          <p className="text-sm text-muted-foreground">You do not have permission to edit this order.</p>
           <Button variant="link" onClick={() => navigate({ to: "/orders" })}>
             Back to orders
           </Button>

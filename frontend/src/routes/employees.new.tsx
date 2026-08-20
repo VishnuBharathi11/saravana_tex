@@ -24,7 +24,7 @@ const employeeSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   email: z.string().email("Invalid email address"),
   phone: z.string().min(10, "Phone number must be at least 10 characters"),
-  role: z.enum(["Admin", "Sales Coordinator", "Employee"]),
+  role: z.enum(["Admin", "Employee"]),
   status: z.enum(["Active", "Inactive"]),
   designation: z.string().min(2, "Designation is required"),
 });
@@ -171,7 +171,6 @@ function NewEmployee() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Admin">Admin</SelectItem>
-                      <SelectItem value="Sales Coordinator">Sales Coordinator</SelectItem>
                       <SelectItem value="Employee">Employee</SelectItem>
                     </SelectContent>
                   </Select>

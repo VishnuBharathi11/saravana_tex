@@ -57,9 +57,7 @@ function OrdersPage() {
   const isAdmin = user.role === "Admin";
   const deleteTarget = orders.find((o) => o.id === deleteTargetId) ?? null;
 
-  const rows = orders
-    .filter((o) => (isAdmin ? true : o.employeeId === user.id))
-    .filter(
+  const rows = orders.filter(
       (o) =>
         (payment === "All" || o.paymentStatus === payment) &&
         (status === "All" || o.status === status) &&
@@ -96,7 +94,7 @@ function OrdersPage() {
       <div className="space-y-4">
         <PageHeader
           title="Orders"
-          subtitle={`${rows.length} orders · ${inr(rows.reduce((a, o) => a + o.value, 0))} pipeline value`}
+          subtitle={isAdmin ? `${rows.length} orders · ${inr(rows.reduce((a, o) => a + o.value, 0))} pipeline value` : `${rows.length} orders in CRM (Edit assigned only)`}
           actions={
             <Button className="gap-2 rounded-xl" onClick={() => navigate({ to: "/orders/new" })}>
               <Plus className="size-4" /> Add Order

@@ -25,6 +25,7 @@ import { inr } from "@/data/mock";
 import { crm, useCrm } from "@/lib/store";
 import { toast } from "sonner";
 import type { Customer, Order } from "@/types";
+import { canEditRecord, canDeleteRecord } from "@/lib/permissions";
 
 export const Route = createFileRoute("/customers/$id")({
   head: () => ({
@@ -134,7 +135,7 @@ function CustomerDetail() {
                   <X className="size-4" /> Cancel
                 </Button>
               </>
-            ) : (
+            ) : canEditRecord(user, customer) ? (
               <>
                 <Button
                   variant="outline"
@@ -152,14 +153,23 @@ function CustomerDetail() {
                 >
                   <Plus className="size-4" /> Create Order
                 </Button>
-                <Button
-                  variant="ghost"
-                  className="gap-2 rounded-xl text-destructive"
-                  onClick={() => setConfirmDelete(true)}
-                >
-                  <Trash2 className="size-4" />
-                </Button>
+                {canDeleteRecord(user, customer) && (
+                  <Button
+                    variant="ghost"
+                    className="gap-2 rounded-xl text-destructive"
+                    onClick={() => setConfirmDelete(true)}
+                  >
+                    <Trash2 className="size-4" />
+                  </Button>
+                )}
               </>
+            ) : (
+              <Button
+                className="gap-2 rounded-xl"
+                onClick={() => navigate({ to: "/orders/new" })}
+              >
+                <Plus className="size-4" /> Create Order
+              </Button>
             )
           }
         />

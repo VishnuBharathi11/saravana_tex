@@ -23,6 +23,8 @@ import { crm, newId, useCrm } from "@/lib/store";
 import { TODAY } from "@/data/mock";
 import type { FollowUp, FollowUpStatus, Priority } from "@/types";
 
+import { CustomerLeadSearch } from "./customer-lead-search";
+
 const STATUSES: FollowUpStatus[] = [
   "Pending",
   "Completed",
@@ -48,10 +50,27 @@ export function FollowUpFormDialog({
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  target: FollowUpTarget;
+  target?: FollowUpTarget;
   existing?: FollowUp | null;
 }) {
   const { employees } = useCrm();
+  const [selectedTarget, setSelectedTarget] = useState<FollowUpTarget | undefined>(target);
+  
+  useEffect(() => {
+    if (open) {
+      if (target) setSelectedTarget(target);
+      else if (existing) {
+        setSelectedTarget({
+          id: existing.relatedId,
+          name: existing.relatedName,
+          type: existing.relatedType as "Lead" | "Customer",
+        });
+      } else {
+        setSelectedTarget(undefined);
+      }
+    }
+  }, [open, target, existing]);
+
   const [form, setForm] = useState<Omit<FollowUp, "id">>({
     title: "",
     description: "",
@@ -61,45 +80,58 @@ export function FollowUpFormDialog({
     priority: "Medium",
     reminder: true,
     employeeId: employees[0]?.id ?? "",
-    relatedName: target.name,
-    relatedType: target.type,
-    relatedId: target.id,
+    relatedName: target?.name ?? "",
+    relatedType: target?.type ?? "Customer",
+    relatedId: target?.id ?? "",
   });
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (!open) return;
-    setError("");
-    if (existing) {
-      const { id: _id, ...rest } = existing;
-      setForm(rest);
-    } else {
-      setForm((f) => ({
-        ...f,
-        title: "",
-        description: "",
-        date: TODAY,
-        time: "10:00",
-        status: "Pending",
-        priority: "Medium",
-        reminder: true,
-        relatedName: target.name,
-        relatedType: target.type,
-        relatedId: target.id,
-      }));
+    if (open) {
+      if (existing) {
+        setForm(existing);
+      } else {
+        setForm({
+          title: "",
+          description: "",
+          date: TODAY,
+          time: "10:00",
+          status: "Pending",
+          priority: "Medium",
+          reminder: true,
+          employeeId: employees[0]?.id ?? "",
+          relatedId: selectedTarget?.id || "",
+          relatedName: selectedTarget?.name || "",
+          relatedType: selectedTarget?.type || "Customer",
+        });
+      }
+      setError("");
     }
-  }, [open, existing, target.id, target.name, target.type]);
+  }, [open, existing, selectedTarget, employees]);
 
   const submit = () => {
     if (!form.title.trim()) {
       setError("Title is required.");
       return;
     }
+    const finalTarget = target || selectedTarget;
+    if (!finalTarget) {
+      setError("Customer or Lead must be selected");
+      return;
+    }
+
+    const payload = {
+      ...form,
+      relatedId: finalTarget.id,
+      relatedName: finalTarget.name,
+      relatedType: finalTarget.type,
+    };
+
     if (existing) {
-      crm.updateFollowUp(existing.id, form);
+      crm.updateFollowUp(existing.id, payload);
       toast.success("Follow-up updated");
     } else {
-      crm.addFollowUp({ ...form, id: newId("FU") });
+      crm.addFollowUp({ ...payload, id: newId("FU") });
       toast.success("Follow-up created");
     }
     onOpenChange(false);
@@ -114,8 +146,22 @@ export function FollowUpFormDialog({
 
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-1.5 sm:col-span-2">
-            <Label>{target.type}</Label>
-            <Input value={target.name} readOnly className="h-10 border-0 bg-white/60" />
+            <Label>{target ? target.type : "Customer / Lead"}</Label>
+            {target ? (
+              <Input value={target.name} readOnly className="h-10 border-0 bg-white/60" />
+            ) : (
+              <CustomerLeadSearch
+                value={selectedTarget?.id ?? null}
+                onChange={(val, rec) => {
+                  if (rec) {
+                    setSelectedTarget({ id: rec.id, name: rec.name, type: rec.type });
+                  } else {
+                    setSelectedTarget(undefined);
+                  }
+                }}
+                typeFilter="Both"
+              />
+            )}
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="fu-date">Date</Label>

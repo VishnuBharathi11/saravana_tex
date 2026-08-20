@@ -3,6 +3,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, Save, Search } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/common/glass";
+import { CustomerLeadSearch } from "@/components/common/customer-lead-search";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -38,8 +39,6 @@ export const Route = createFileRoute("/orders/new")({
 function NewOrder() {
   const user = useRequireAuth();
   const navigate = useNavigate();
-  const { customers } = useCrm();
-  const [query, setQuery] = useState("");
   const [picked, setPicked] = useState<string | null>(null);
 
   const [d, setD] = useState<Partial<Order>>({
@@ -53,13 +52,6 @@ function NewOrder() {
   });
 
   if (!user) return null;
-
-  const matches =
-    query.trim() && !picked
-      ? customers
-          .filter((c) => `${c.name} ${c.company}`.toLowerCase().includes(query.toLowerCase()))
-          .slice(0, 6)
-      : [];
 
   const upd = (patch: Partial<Order>) => {
     setD((prev) => {
@@ -116,42 +108,33 @@ function NewOrder() {
 
         <div className="glass rounded-2xl p-4">
           <Label>Customer</Label>
-          <div className="relative mt-1.5">
-            <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={query}
-              onChange={(e) => {
-                setQuery(e.target.value);
-                setPicked(null);
+          <div className="mt-1.5">
+            <CustomerLeadSearch
+              value={picked}
+              onChange={(id, record) => {
+                setPicked(id);
+                if (record) {
+                  upd({
+                    customerId: record.id,
+                    customerName: record.name,
+                    company: record.company,
+                    address: record.address,
+                    employeeId: record.employeeId,
+                  });
+                } else {
+                  upd({
+                    customerId: "",
+                    customerName: "",
+                    company: "",
+                    address: "",
+                    employeeId: "",
+                  });
+                }
               }}
+              typeFilter="Customer"
               placeholder="Start typing a customer name…"
-              className="glass-soft h-10 border-0 pl-9"
             />
           </div>
-          {matches.length > 0 && (
-            <div className="mt-2 space-y-1">
-              {matches.map((c) => (
-                <button
-                  key={c.id}
-                  onClick={() => {
-                    setPicked(c.id);
-                    setQuery(`${c.name} · ${c.company}`);
-                    upd({
-                      customerId: c.id,
-                      customerName: c.name,
-                      company: c.company,
-                      address: c.address,
-                      employeeId: c.employeeId,
-                    });
-                  }}
-                  className="flex w-full items-center justify-between rounded-lg bg-white/60 px-3 py-2 text-left text-sm hover:bg-mint/35"
-                >
-                  <span>{c.name}</span>
-                  <span className="text-xs text-muted-foreground">{c.company}</span>
-                </button>
-              ))}
-            </div>
-          )}
         </div>
 
         <form className="glass rounded-2xl p-4" onSubmit={handleSave}>

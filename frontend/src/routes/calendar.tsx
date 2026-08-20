@@ -17,6 +17,8 @@ import { AlertTriangle, ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/common/glass";
 import { StatusChip } from "@/components/common/status-chip";
+import { FollowUpFormDialog } from "@/components/common/followup-form-dialog";
+import { CustomerLeadSearch } from "@/components/common/customer-lead-search";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -38,7 +40,9 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useRequireAuth } from "@/hooks/use-require-auth";
-import { TODAY, customers, employeeName, employees, followUps, leads } from "@/data/mock";
+import { TODAY, customers, employeeName, employees, leads } from "@/data/mock";
+import { useCrm } from "@/lib/store";
+import { canEditRecord } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import type { FollowUp } from "@/types";
@@ -72,102 +76,16 @@ type View = "Daily" | "Weekly" | "Monthly" | "Today";
 function AddFollowUpDialog() {
   const [open, setOpen] = useState(false);
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button className="gap-2 rounded-xl">
-          <Plus className="size-4" /> Add Follow-up
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="max-h-[88vh] max-w-lg overflow-y-auto bg-white">
-        <DialogHeader>
-          <DialogTitle>New follow-up</DialogTitle>
-        </DialogHeader>
-        <form
-          className="space-y-3"
-          onSubmit={(e) => {
-            e.preventDefault();
-            setOpen(false);
-            toast.success("Follow-up scheduled");
-          }}
-        >
-          <div className="space-y-1.5">
-            <Label>Customer / Lead</Label>
-            <Select>
-              <SelectTrigger className="h-10 w-full">
-                <SelectValue placeholder="Search customer or lead" />
-              </SelectTrigger>
-              <SelectContent className="max-h-60">
-                {[...customers.slice(0, 15), ...leads.slice(0, 15)].map((r) => (
-                  <SelectItem key={r.id} value={r.id}>
-                    {r.name} · {r.company}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="d">Date</Label>
-              <Input id="d" type="date" defaultValue={TODAY} className="h-10" />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="t">Time</Label>
-              <Input id="t" type="time" defaultValue="10:00" className="h-10" />
-            </div>
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="ti">Title</Label>
-            <Input id="ti" placeholder="Quotation follow-up" className="h-10" required />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="de">Description</Label>
-            <Textarea id="de" rows={3} placeholder="What needs to be discussed?" />
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label>Priority</Label>
-              <Select>
-                <SelectTrigger className="h-10 w-full">
-                  <SelectValue placeholder="Medium" />
-                </SelectTrigger>
-                <SelectContent>
-                  {["Low", "Medium", "High"].map((p) => (
-                    <SelectItem key={p} value={p}>
-                      {p}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label>Assigned employee</Label>
-              <Select>
-                <SelectTrigger className="h-10 w-full">
-                  <SelectValue placeholder="Choose" />
-                </SelectTrigger>
-                <SelectContent className="max-h-60">
-                  {employees.map((e) => (
-                    <SelectItem key={e.id} value={e.id}>
-                      {e.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <label className="flex items-center justify-between rounded-xl border px-3 py-2 text-sm">
-            Reminder notification <Switch defaultChecked />
-          </label>
-          <Button type="submit" className="w-full rounded-xl">
-            Schedule follow-up
-          </Button>
-        </form>
-      </DialogContent>
-    </Dialog>
+    <>
+      <Button className="gap-2 rounded-xl" onClick={() => setOpen(true)}>
+        <Plus className="size-4" /> Add Follow-up
+      </Button>
+      <FollowUpFormDialog open={open} onOpenChange={setOpen} />
+    </>
   );
 }
 
-function EventChip({ f, onClick }: { f: FollowUp; onClick: () => void }) {
+function EventChip({ f, onClick, isOwn }: { f: FollowUp; onClick: () => void; isOwn?: boolean }) {
   return (
     <button
       onClick={onClick}
@@ -176,7 +94,7 @@ function EventChip({ f, onClick }: { f: FollowUp; onClick: () => void }) {
         EVENT_COLORS[f.status],
       )}
     >
-      {f.time} {f.title}
+      {isOwn && "★ "}{f.time} {f.title}
     </button>
   );
 }
@@ -189,10 +107,8 @@ function CalendarPage() {
   const [detail, setDetail] = useState<FollowUp | null>(null);
   const [mobileTab, setMobileTab] = useState<"Upcoming" | "Pending">("Upcoming");
 
-  const events = useMemo(
-    () => (user?.role === "Admin" ? followUps : followUps.filter((f) => f.employeeId === user?.id)),
-    [user],
-  );
+  const { followUps } = useCrm();
+  const events = followUps;
 
   const eventsOn = (d: Date) => events.filter((f) => isSameDay(parseISO(f.date), d));
 
@@ -281,7 +197,7 @@ function CalendarPage() {
                       <span className="text-xs font-semibold">{format(d, "d")}</span>
                       <div className="mt-1 space-y-1">
                         {dayEvents.slice(0, 2).map((f) => (
-                          <EventChip key={f.id} f={f} onClick={() => setDetail(f)} />
+                          <EventChip key={f.id} f={f} onClick={() => setDetail(f)} isOwn={f.employeeId === user.id} />
                         ))}
                         {dayEvents.length > 2 && (
                           <span className="block text-[10px] text-muted-foreground">
@@ -302,7 +218,7 @@ function CalendarPage() {
                     <p className="text-xs font-semibold">{format(d, "EEE d")}</p>
                     <div className="mt-1.5 space-y-1">
                       {eventsOn(d).map((f) => (
-                        <EventChip key={f.id} f={f} onClick={() => setDetail(f)} />
+                        <EventChip key={f.id} f={f} onClick={() => setDetail(f)} isOwn={f.employeeId === user.id} />
                       ))}
                     </div>
                   </div>
@@ -325,7 +241,7 @@ function CalendarPage() {
                     )}
                   >
                     <span className="min-w-0">
-                      <span className="block truncate text-sm font-semibold">{f.title}</span>
+                      <span className="block truncate text-sm font-semibold">{f.employeeId === user.id && "★ "}{f.title}</span>
                       <span className="block truncate text-xs opacity-80">
                         {f.time} · {f.relatedName} · {employeeName(f.employeeId)}
                       </span>
@@ -433,7 +349,7 @@ function CalendarPage() {
                     className="flex w-full items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-left hover:bg-muted"
                   >
                     <span className="min-w-0">
-                      <span className="block truncate text-xs font-medium">{f.title}</span>
+                      <span className="block truncate text-xs font-medium">{f.employeeId === user.id && "★ "}{f.title}</span>
                       <span className="block truncate text-[11px] text-muted-foreground">
                         {f.date} · {f.relatedName}
                       </span>
@@ -465,7 +381,7 @@ function CalendarPage() {
                     className="flex w-full items-center justify-between gap-2 rounded-lg bg-white px-2 py-1.5 text-left hover:bg-mint/25"
                   >
                     <span className="min-w-0">
-                      <span className="block truncate text-xs font-medium">{f.title}</span>
+                      <span className="block truncate text-xs font-medium">{f.employeeId === user.id && "★ "}{f.title}</span>
                       <span className="block truncate text-[11px] text-muted-foreground">
                         missed {f.date} · {f.relatedName}
                       </span>
@@ -532,31 +448,33 @@ function CalendarPage() {
                         </p>
                       ))}
                   </div>
-                  <div className="flex gap-2 pt-1">
-                    <Button
-                      className="rounded-xl"
-                      onClick={() => toast.success("Follow-up marked completed")}
-                    >
-                      Mark completed
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="rounded-xl"
-                      onClick={() => toast("Edit mode enabled")}
-                    >
-                      Edit
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      className="rounded-xl text-destructive"
-                      onClick={() => {
-                        setDetail(null);
-                        toast.error("Follow-up deleted");
-                      }}
-                    >
-                      Delete
-                    </Button>
-                  </div>
+                  {canEditRecord(user, detail) && (
+                    <div className="flex gap-2 pt-1">
+                      <Button
+                        className="rounded-xl"
+                        onClick={() => toast.success("Follow-up marked completed")}
+                      >
+                        Mark completed
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="rounded-xl"
+                        onClick={() => toast("Edit mode enabled")}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        className="rounded-xl text-destructive"
+                        onClick={() => {
+                          setDetail(null);
+                          toast.error("Follow-up deleted");
+                        }}
+                      >
+                        Delete
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </>
             )}

@@ -20,16 +20,13 @@ import { DashboardWorkflowOptions } from "@/components/dashboard/dashboard-workf
 import { useRequireAuth } from "@/hooks/use-require-auth";
 import {
   TODAY,
-  customers,
   dashboardStats,
   employeeName,
   employees,
-  followUps,
   inr,
-  leads,
-  orders,
   statusSeries,
 } from "@/data/mock";
+import { useCrm } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import type { Lead } from "@/types";
 
@@ -63,14 +60,12 @@ function DashboardPage() {
   const [board, setBoard] = useState<"leads" | "converted" | "orders" | "employees">("leads");
   const [mobileTab, setMobileTab] = useState<"Upcoming" | "Pending">("Upcoming");
 
-  const isAdmin = user?.role === "Admin";
-  const scopedLeads = isAdmin ? leads : leads.filter((l) => l.employeeId === user?.id);
-  const scopedOrders = isAdmin ? orders : orders.filter((o) => o.employeeId === user?.id);
+  const { leads, customers, orders, followUps } = useCrm();
 
   const boardRows = useMemo(() => {
-    if (board === "converted") return scopedLeads.filter((l) => l.status === "Converted");
+    if (board === "converted") return leads.filter((l) => l.status === "Converted");
     if (board === "orders")
-      return scopedOrders
+      return orders
         .filter((o) => o.status !== "Cancelled")
         .slice(0, 40)
         .map<Lead>((o) => ({
@@ -110,8 +105,8 @@ function DashboardPage() {
         createdAt: e.createdAt,
         feedback: `${orders.filter((o) => o.employeeId === e.id).length} orders handled`,
       }));
-    return scopedLeads;
-  }, [board, scopedLeads, scopedOrders]);
+    return leads;
+  }, [board, leads, orders]);
 
   const boardColumns: Column<Lead>[] = [
     { key: "name", header: "Name" },

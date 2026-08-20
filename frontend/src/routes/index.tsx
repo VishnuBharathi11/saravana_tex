@@ -31,7 +31,6 @@ export const Route = createFileRoute("/")({
 
 const demoAccounts = [
   employees.find((e) => e.role === "Admin"),
-  employees.find((e) => e.role === "Sales Coordinator"),
   employees.find((e) => e.role === "Employee" && e.status === "Active"),
 ]
   .filter((e): e is (typeof employees)[number] => Boolean(e))
@@ -82,7 +81,7 @@ function LoginPage() {
                   icon: Sparkles,
                   text: "Colour-coded follow-up calendar with missed-task rollover",
                 },
-                { icon: ShieldCheck, text: "Role based access for admins and sales coordinators" },
+                { icon: ShieldCheck, text: "Role based access for admins and employees" },
               ].map((f) => (
                 <div key={f.text} className="flex items-center gap-3">
                   <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-white/70 text-primary">
