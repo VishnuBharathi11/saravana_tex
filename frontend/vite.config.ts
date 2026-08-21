@@ -5,11 +5,21 @@
 //     React/TanStack dedupe, error logger plugins, and sandbox detection (port/host/strictPort).
 // You can pass additional config via defineConfig({ vite: { ... }, etc... }) if needed.
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
+import { cloudflare } from "@cloudflare/vite-plugin";
 
 export default defineConfig({
   tanstackStart: {
     server: { entry: "server" },
   },
+
+  vite: {
+    plugins: [
+      cloudflare({
+        viteEnvironment: { name: "ssr" },
+      }),
+    ],
+  },
+
   nitro: {
     // @ts-expect-error - prerender is not in wrapper types
     prerender: {
