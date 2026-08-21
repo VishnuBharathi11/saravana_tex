@@ -83,12 +83,15 @@ export interface FollowUp {
   relatedId: string;
 }
 
+export type NotificationType = "FOLLOW_UP" | "LEAD" | "CUSTOMER" | "ORDER" | "EMPLOYEE";
+
 export interface AppNotification {
   id: string;
+  type: NotificationType;
   title: string;
-  body: string;
-  type: "Follow-up" | "Missed" | "Lead" | "Order" | "Meeting";
-  time: string;
+  description: string;
+  timestamp: string;
+  targetId?: string;
   read: boolean;
 }
 

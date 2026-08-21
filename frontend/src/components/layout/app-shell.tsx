@@ -30,7 +30,11 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
-import { customers, employees, followUps, leads, notifications, orders } from "@/data/mock";
+import { crm, useCrm } from "@/lib/store";
+import { customers, employees, followUps, leads, orders } from "@/data/mock";
+import { FollowUpDetailDialog } from "@/components/common/followup-detail-dialog";
+import { toast } from "sonner";
+import type { AppNotification } from "@/types";
 import { StatusChip } from "@/components/common/status-chip";
 
 const NAV = [
@@ -189,43 +193,96 @@ function GlobalSearch() {
 }
 
 function NotificationBell() {
+  const { notifications, followUps } = useCrm();
+  const navigate = useNavigate();
+  const [openDetailId, setOpenDetailId] = useState<string | null>(null);
+
   const unread = notifications.filter((n) => !n.read).length;
+
+  const handleNotificationClick = (n: AppNotification) => {
+    if (!n.read) {
+      crm.markNotificationAsRead(n.id);
+    }
+
+    if (!n.targetId) {
+      toast.error("Notification link broken");
+      return;
+    }
+
+    if (n.type === "FOLLOW_UP") {
+      const fu = followUps.find((f) => f.id === n.targetId);
+      if (fu) {
+        setOpenDetailId(fu.id);
+      } else {
+        toast.error("Follow-up no longer exists");
+      }
+      return;
+    }
+
+    const routeMap: Record<string, string> = {
+      LEAD: "/leads/$id",
+      CUSTOMER: "/customers/$id",
+      ORDER: "/orders/$id",
+      EMPLOYEE: "/employees/$id",
+    };
+
+    const route = routeMap[n.type];
+    if (route) {
+      navigate({ to: route, params: { id: n.targetId } });
+    } else {
+      toast.error("Invalid notification target");
+    }
+  };
+
+  const detailFollowUp = followUps.find((f) => f.id === openDetailId) || null;
+
   return (
-    <Popover>
-      <PopoverTrigger asChild>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="glass-soft relative size-9 rounded-xl border-0"
-        >
-          <Bell className="size-[18px]" />
-          {unread > 0 && (
-            <span className="absolute -top-1 -right-1 grid size-4 place-items-center rounded-full bg-coral text-[10px] font-bold text-primary-foreground">
-              {unread}
-            </span>
-          )}
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent align="end" className="w-[min(92vw,22rem)] p-2">
-        <p className="px-2 py-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-          Notifications
-        </p>
-        <div className="mt-1 space-y-1">
-          {notifications.map((n) => (
-            <div
-              key={n.id}
-              className={cn("rounded-lg px-3 py-2", !n.read ? "bg-mint/30" : "hover:bg-muted")}
-            >
-              <div className="flex items-center justify-between gap-2">
-                <p className="truncate text-sm font-semibold">{n.title}</p>
-                <span className="shrink-0 text-[10px] text-muted-foreground">{n.time}</span>
-              </div>
-              <p className="mt-0.5 text-xs text-muted-foreground">{n.body}</p>
-            </div>
-          ))}
-        </div>
-      </PopoverContent>
-    </Popover>
+    <>
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="glass-soft relative size-9 rounded-xl border-0"
+          >
+            <Bell className="size-[18px]" />
+            {unread > 0 && (
+              <span className="absolute -top-1 -right-1 grid size-4 place-items-center rounded-full bg-coral text-[10px] font-bold text-primary-foreground">
+                {unread}
+              </span>
+            )}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent align="end" className="w-[min(92vw,22rem)] p-2">
+          <p className="px-2 py-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+            Notifications
+          </p>
+          <div className="mt-1 space-y-1">
+            {notifications.map((n) => (
+              <button
+                key={n.id}
+                onClick={() => handleNotificationClick(n)}
+                className={cn(
+                  "block w-full rounded-lg px-3 py-2 text-left transition-colors",
+                  !n.read ? "bg-mint/30" : "hover:bg-muted"
+                )}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <p className="truncate text-sm font-semibold">{n.title}</p>
+                  <span className="shrink-0 text-[10px] text-muted-foreground">{n.timestamp}</span>
+                </div>
+                <p className="mt-0.5 text-xs text-muted-foreground">{n.description}</p>
+              </button>
+            ))}
+          </div>
+        </PopoverContent>
+      </Popover>
+
+      <FollowUpDetailDialog
+        detail={detailFollowUp}
+        onClose={() => setOpenDetailId(null)}
+      />
+    </>
   );
 }
 

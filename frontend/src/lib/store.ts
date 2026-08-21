@@ -5,6 +5,7 @@ import {
   followUps as seedFollowUps,
   leads as seedLeads,
   orders as seedOrders,
+  notifications as seedNotifications,
 } from "@/data/mock";
 import type {
   Customer,
@@ -14,6 +15,7 @@ import type {
   Order,
   AccessPermission,
   EmployeeAccess,
+  AppNotification,
 } from "@/types";
 import { canEditRecord, canDeleteRecord, canManageEmployees } from "@/lib/permissions";
 
@@ -25,6 +27,7 @@ export interface CrmState {
   followUps: FollowUp[];
   accessPermissions: AccessPermission[];
   employeeAccess: EmployeeAccess[];
+  notifications: AppNotification[];
 }
 
 let state: CrmState = {
@@ -39,6 +42,7 @@ let state: CrmState = {
     scope: e.role === "Admin" ? "FULL" : "OWN",
     sharedEmployeeIds: [],
   })),
+  notifications: seedNotifications,
 };
 
 const TODAY_STR = new Date().toISOString().slice(0, 10);
@@ -281,6 +285,13 @@ export const crm = {
     if (!canEditRecord(user, followUp)) return;
     set({
       followUps: state.followUps.map((f) => (f.id === id ? { ...f, status: "Completed" } : f)),
+    });
+  },
+  markNotificationAsRead(id: string) {
+    set({
+      notifications: state.notifications.map((n) =>
+        n.id === id ? { ...n, read: true } : n
+      ),
     });
   },
 };

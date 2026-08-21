@@ -18,6 +18,7 @@ import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/common/glass";
 import { StatusChip } from "@/components/common/status-chip";
 import { FollowUpFormDialog } from "@/components/common/followup-form-dialog";
+import { FollowUpDetailDialog } from "@/components/common/followup-detail-dialog";
 import { CustomerLeadSearch } from "@/components/common/customer-lead-search";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -411,75 +412,7 @@ function CalendarPage() {
           </div>
         </div>
 
-        <Dialog open={!!detail} onOpenChange={(o) => !o && setDetail(null)}>
-          <DialogContent className="max-w-lg bg-white">
-            {detail && (
-              <>
-                <DialogHeader>
-                  <DialogTitle>{detail.title}</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-2 text-sm">
-                  <p className="text-muted-foreground">{detail.description}</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    {[
-                      ["Date", detail.date],
-                      ["Time", detail.time],
-                      ["Related", `${detail.relatedType}: ${detail.relatedName}`],
-                      ["Owner", employeeName(detail.employeeId)],
-                      ["Priority", detail.priority],
-                      ["Reminder", detail.reminder ? "On" : "Off"],
-                    ].map(([k, v]) => (
-                      <div key={k} className="rounded-lg border px-3 py-2">
-                        <p className="text-[11px] text-muted-foreground uppercase">{k}</p>
-                        <p className="text-sm font-medium">{v}</p>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="rounded-lg border px-3 py-2">
-                    <p className="text-[11px] text-muted-foreground uppercase">
-                      Previous follow-ups
-                    </p>
-                    {events
-                      .filter((f) => f.relatedId === detail.relatedId && f.id !== detail.id)
-                      .slice(0, 3)
-                      .map((f) => (
-                        <p key={f.id} className="mt-1 text-xs">
-                          {f.date} · {f.title} · {f.status}
-                        </p>
-                      ))}
-                  </div>
-                  {canEditRecord(user, detail) && (
-                    <div className="flex gap-2 pt-1">
-                      <Button
-                        className="rounded-xl"
-                        onClick={() => toast.success("Follow-up marked completed")}
-                      >
-                        Mark completed
-                      </Button>
-                      <Button
-                        variant="outline"
-                        className="rounded-xl"
-                        onClick={() => toast("Edit mode enabled")}
-                      >
-                        Edit
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        className="rounded-xl text-destructive"
-                        onClick={() => {
-                          setDetail(null);
-                          toast.error("Follow-up deleted");
-                        }}
-                      >
-                        Delete
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              </>
-            )}
-          </DialogContent>
-        </Dialog>
+        <FollowUpDetailDialog detail={detail} onClose={() => setDetail(null)} />
       </div>
     </AppShell>
   );
