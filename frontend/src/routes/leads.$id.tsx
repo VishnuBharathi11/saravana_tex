@@ -20,9 +20,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useRequireAuth } from "@/hooks/use-require-auth";
-import { useCrm } from "@/lib/store";
 import { toast } from "sonner";
 import type { Lead, LeadStatus } from "@/types";
+import { getFollowUps } from "@/api/followups";
 import { canEditRecord, canDeleteRecord } from "@/lib/permissions";
 import {
   convertLead,
@@ -72,12 +72,16 @@ function LeadDetail() {
   const { id } = useParams({ from: "/leads/$id" });
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { followUps } = useCrm();
 
   const leadQuery = useQuery({
     queryKey: ["leads", id],
     queryFn: () => getLead(id),
     enabled: Boolean(user && id),
+  });
+  const followUpsQuery = useQuery({
+    queryKey: ["follow-ups"],
+    queryFn: getFollowUps,
+    enabled: Boolean(user),
   });
 
   const [editing, setEditing] = useState(false);
@@ -163,7 +167,7 @@ function LeadDetail() {
   }
 
   const lead = leadQuery.data;
-  const history = followUps.filter((followUp) => followUp.relatedId === lead.id);
+  const history = (followUpsQuery.data ?? []).filter((followUp) => followUp.relatedId === lead.id);
   const d = draft ?? lead;
   const upd = (patch: Partial<Lead>) => setDraft({ ...d, ...patch });
 

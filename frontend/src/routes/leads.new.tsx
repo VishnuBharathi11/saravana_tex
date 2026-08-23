@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, CalendarPlus, Save } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/common/glass";
@@ -17,7 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useRequireAuth } from "@/hooks/use-require-auth";
-import { employees } from "@/data/mock";
+import { getEmployees } from "@/api/employees";
 import { TEXTILE_UNITS } from "@/lib/constants";
 import { createLead, type CreateLeadInput } from "@/api/leads";
 import { toast } from "sonner";
@@ -58,6 +58,8 @@ function NewLead() {
   const user = useRequireAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const employeesQuery = useQuery({ queryKey: ["employees"], queryFn: getEmployees, enabled: Boolean(user) });
+  const employees = employeesQuery.data ?? [];
   const [form, setForm] = useState<CreateLeadInput>(initialForm);
   const [saved, setSaved] = useState(false);
 
@@ -82,7 +84,7 @@ function NewLead() {
     setForm((current) => ({ ...current, [key]: value }));
   };
 
-  const submit = (event: React.FormEvent) => {
+  const submit = (event: FormEvent) => {
     event.preventDefault();
     if (!form.name.trim() || !form.company.trim() || !form.address.trim() || !form.material.trim() || !form.units || !form.duration || !form.source) {
       toast.error("Complete all required lead fields");

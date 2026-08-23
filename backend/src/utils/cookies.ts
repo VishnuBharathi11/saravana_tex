@@ -16,7 +16,7 @@ export function createSessionCookie(
   const options: CookieOptions = {
     httpOnly: true,
     secure: true,
-    sameSite: "Lax",
+    sameSite: "None",
     path: "/",
     maxAge: maxAgeSeconds,
   };
@@ -35,7 +35,7 @@ export function createClearedSessionCookie(): string {
     {
       httpOnly: true,
       secure: true,
-      sameSite: "Lax",
+      sameSite: "None",
       path: "/",
       maxAge: 0,
     },

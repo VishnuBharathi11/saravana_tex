@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/lib/auth";
-import { employees } from "@/data/mock";
+import { getEmployees } from "@/api/employees";
+import { useQuery } from "@tanstack/react-query";
 
 import { toast } from "sonner";
 
@@ -29,26 +30,20 @@ export const Route = createFileRoute("/")({
   component: LoginPage,
 });
 
-const demoAccounts = [
-  employees.find((e) => e.role === "Admin"),
-  employees.find((e) => e.role === "Employee" && e.status === "Active"),
-]
-  .filter((e): e is (typeof employees)[number] => Boolean(e))
-  .map((e) => ({
-    id: e.id,
-    name: e.name,
-    email: e.email,
-    role: e.role,
-    initials: e.name
-      .split(" ")
-      .map((p) => p[0])
-      .join("")
-      .slice(0, 2),
-  }));
-
 function LoginPage() {
   const { login, user, ready } = useAuth();
   const navigate = useNavigate();
+  const employeesQuery = useQuery({ queryKey: ["employees"], queryFn: getEmployees });
+  const demoAccounts = (employeesQuery.data ?? [])
+    .filter((employee) => employee.role === "Admin" || (employee.role === "Employee" && employee.status === "Active"))
+    .slice(0, 2)
+    .map((employee) => ({
+      id: employee.id,
+      name: employee.name,
+      email: employee.email,
+      role: employee.role,
+      initials: employee.name.split(" ").map((part) => part[0]).join("").slice(0, 2),
+    }));
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);

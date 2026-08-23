@@ -1,5 +1,7 @@
 import { Link } from "@tanstack/react-router";
-import { useCrm } from "@/lib/store";
+import { useQuery } from "@tanstack/react-query";
+import { getEmployees } from "@/api/employees";
+import { useRequireAuth } from "@/hooks/use-require-auth";
 import { cn } from "@/lib/utils";
 
 const initials = (name: string) =>
@@ -22,8 +24,13 @@ export function EmployeeLink({
   className?: string;
   showRole?: boolean;
 }) {
-  const { employees } = useCrm();
-  const employee = employees.find((e) => e.id === employeeId);
+  const user = useRequireAuth();
+  const employeesQuery = useQuery({
+    queryKey: ["employees"],
+    queryFn: getEmployees,
+    enabled: Boolean(user),
+  });
+  const employee = employeesQuery.data?.find((e) => e.id === employeeId);
 
   const body = employee ? (
     <Link

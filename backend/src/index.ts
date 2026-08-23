@@ -31,11 +31,19 @@ const app = new Hono<{ Bindings: Bindings }>();
 app.use(
   "/api/*",
   cors({
-    origin: "https://saravana-tex.saravanatraders-web.workers.dev",
-    credentials: true,
-    allowMethods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
-    allowHeaders: ["Content-Type"],
-  }),
+  origin: (origin) => {
+    const allowedOrigins = [
+      "https://saravana-tex.saravanatraders-web.workers.dev",
+      "http://10.56.61.4:8080",
+      "http://localhost:8080",
+    ];
+
+    return allowedOrigins.includes(origin) ? origin : null;
+  },
+  credentials: true,
+  allowMethods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+  allowHeaders: ["Content-Type"],
+})
 );
 
 app.get('/', (c) => {

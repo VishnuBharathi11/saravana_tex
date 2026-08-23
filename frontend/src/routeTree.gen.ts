@@ -16,6 +16,7 @@ import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as CustomersIndexRouteImport } from './routes/customers.index'
 import { Route as CustomersIdRouteImport } from './routes/customers.$id'
+import { Route as CustomersNewRouteImport } from './routes/customers.new'
 import { Route as EmployeesIndexRouteImport } from './routes/employees.index'
 import { Route as EmployeesIdRouteImport } from './routes/employees.$id'
 import { Route as EmployeesNewRouteImport } from './routes/employees.new'
@@ -60,6 +61,11 @@ const CustomersIndexRoute = CustomersIndexRouteImport.update({
 const CustomersIdRoute = CustomersIdRouteImport.update({
   id: '/customers/$id',
   path: '/customers/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CustomersNewRoute = CustomersNewRouteImport.update({
+  id: '/customers/new',
+  path: '/customers/new',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EmployeesIndexRoute = EmployeesIndexRouteImport.update({
@@ -120,6 +126,7 @@ export interface FileRoutesByFullPath {
   '/profile': typeof ProfileRoute
   '/settings': typeof SettingsRoute
   '/customers/$id': typeof CustomersIdRoute
+  '/customers/new': typeof CustomersNewRoute
   '/employees/$id': typeof EmployeesIdRoute
   '/employees/new': typeof EmployeesNewRoute
   '/leads/$id': typeof LeadsIdRoute
@@ -139,6 +146,7 @@ export interface FileRoutesByTo {
   '/profile': typeof ProfileRoute
   '/settings': typeof SettingsRoute
   '/customers/$id': typeof CustomersIdRoute
+  '/customers/new': typeof CustomersNewRoute
   '/employees/$id': typeof EmployeesIdRoute
   '/employees/new': typeof EmployeesNewRoute
   '/leads/$id': typeof LeadsIdRoute
@@ -159,6 +167,7 @@ export interface FileRoutesById {
   '/profile': typeof ProfileRoute
   '/settings': typeof SettingsRoute
   '/customers/$id': typeof CustomersIdRoute
+  '/customers/new': typeof CustomersNewRoute
   '/employees/$id': typeof EmployeesIdRoute
   '/employees/new': typeof EmployeesNewRoute
   '/leads/$id': typeof LeadsIdRoute
@@ -180,6 +189,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/settings'
     | '/customers/$id'
+    | '/customers/new'
     | '/employees/$id'
     | '/employees/new'
     | '/leads/$id'
@@ -199,6 +209,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/settings'
     | '/customers/$id'
+    | '/customers/new'
     | '/employees/$id'
     | '/employees/new'
     | '/leads/$id'
@@ -218,6 +229,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/settings'
     | '/customers/$id'
+    | '/customers/new'
     | '/employees/$id'
     | '/employees/new'
     | '/leads/$id'
@@ -238,6 +250,7 @@ export interface RootRouteChildren {
   ProfileRoute: typeof ProfileRoute
   SettingsRoute: typeof SettingsRoute
   CustomersIdRoute: typeof CustomersIdRoute
+  CustomersNewRoute: typeof CustomersNewRoute
   EmployeesIdRoute: typeof EmployeesIdRoute
   EmployeesNewRoute: typeof EmployeesNewRoute
   LeadsIdRoute: typeof LeadsIdRoute
@@ -299,6 +312,13 @@ declare module '@tanstack/react-router' {
       path: '/customers/$id'
       fullPath: '/customers/$id'
       preLoaderRoute: typeof CustomersIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/customers/new': {
+      id: '/customers/new'
+      path: '/customers/new'
+      fullPath: '/customers/new'
+      preLoaderRoute: typeof CustomersNewRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/employees/': {
@@ -393,6 +413,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProfileRoute: ProfileRoute,
   SettingsRoute: SettingsRoute,
   CustomersIdRoute: CustomersIdRoute,
+  CustomersNewRoute: CustomersNewRoute,
   EmployeesIdRoute: EmployeesIdRoute,
   EmployeesNewRoute: EmployeesNewRoute,
   LeadsIdRoute: LeadsIdRoute,

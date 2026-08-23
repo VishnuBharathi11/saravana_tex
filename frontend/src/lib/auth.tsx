@@ -11,7 +11,6 @@ import {
   login as apiLogin,
   logout as apiLogout,
 } from "@/api/auth";
-import { setCurrentUser } from "@/lib/store";
 import type { Employee } from "@/types";
 
 interface AuthState {
@@ -30,7 +29,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const setAuthenticatedUser = (nextUser: Employee | null) => {
     setUserState(nextUser);
-    setCurrentUser(nextUser);
   };
 
   useEffect(() => {

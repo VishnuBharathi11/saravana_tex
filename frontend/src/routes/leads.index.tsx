@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { Plus, Search } from "lucide-react";
@@ -9,7 +9,7 @@ import { DataTable, type Column } from "@/components/common/data-table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useRequireAuth } from "@/hooks/use-require-auth";
-import { employeeName, employees } from "@/data/mock";
+import { getEmployees } from "@/api/employees";
 import { getLeads } from "@/api/leads";
 import type { Lead } from "@/types";
 
@@ -47,9 +47,17 @@ function LeadsPage() {
     queryFn: getLeads,
     enabled: Boolean(user),
   });
+  const employeesQuery = useQuery({
+    queryKey: ["employees"],
+    queryFn: getEmployees,
+    enabled: Boolean(user),
+  });
 
   if (!user) return null;
   const isAdmin = user.role === "Admin";
+  const employees = employeesQuery.data ?? [];
+  const employeeName = (employeeId?: string) =>
+    employees.find((employee) => employee.id === employeeId)?.name ?? "Unassigned";
 
   const leads = leadsQuery.data ?? [];
   const leadRows = leads.filter(

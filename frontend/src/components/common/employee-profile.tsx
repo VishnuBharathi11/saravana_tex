@@ -8,10 +8,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useCrm, crm } from "@/lib/store";
-import { inr } from "@/data/mock";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { updateEmployee } from "@/api/employees";
+import { getLeads } from "@/api/leads";
+import { getOrders } from "@/api/orders";
+import { getFollowUps } from "@/api/followups";
 import { toast } from "sonner";
 import type { Employee } from "@/types";
+
+const inr = (value: number) => `₹${value.toLocaleString("en-IN")}`;
 
 interface EmployeeProfileProps {
   employee: Employee;
@@ -30,6 +35,17 @@ export function EmployeeProfile({
   showWorkload = true,
   onSave,
 }: EmployeeProfileProps) {
+  const queryClient = useQueryClient();
+  const updateMutation = useMutation({
+    mutationFn: (patch: Pick<Employee, "name" | "email" | "phone" | "designation" | "about">) =>
+      updateEmployee(employee.id, patch),
+    onSuccess: async (updated) => {
+      queryClient.setQueryData(["employees", employee.id], updated);
+      await queryClient.invalidateQueries({ queryKey: ["employees"] });
+      toast.success("Profile updated");
+    },
+    onError: (error) => toast.error(error instanceof Error ? error.message : "Unable to update profile"),
+  });
   const [name, setName] = useState(employee.name);
   const [email, setEmail] = useState(employee.email);
   const [phone, setPhone] = useState(employee.phone);
@@ -65,8 +81,7 @@ export function EmployeeProfile({
       return;
     }
 
-    crm.updateEmployee(employee.id, patch);
-    toast.success("Profile updated");
+    updateMutation.mutate(patch);
   };
 
   return (
@@ -175,7 +190,7 @@ export function EmployeeProfile({
                     </Button>
                     <Button
                       type="submit"
-                      disabled={isSaving}
+                      disabled={isSaving || updateMutation.isPending}
                       className="flex-1 gap-2 rounded-xl"
                     >
                       <Save className="size-4" /> Save Changes
@@ -232,7 +247,12 @@ export function EmployeeProfile({
 }
 
 function EmployeeWorkload({ employee }: { employee: Employee }) {
-  const { leads, orders, followUps } = useCrm();
+  const leadsQuery = useQuery({ queryKey: ["leads"], queryFn: getLeads });
+  const ordersQuery = useQuery({ queryKey: ["orders"], queryFn: getOrders });
+  const followUpsQuery = useQuery({ queryKey: ["follow-ups"], queryFn: getFollowUps });
+  const leads = leadsQuery.data ?? [];
+  const orders = ordersQuery.data ?? [];
+  const followUps = followUpsQuery.data ?? [];
   const myLeads = leads.filter((l) => l.employeeId === employee.id);
   const myOrders = orders.filter((o) => o.employeeId === employee.id);
   const myFollowUps = followUps.filter((f) => f.employeeId === employee.id);
