@@ -1,5 +1,6 @@
 import type { CreateFollowUpInput } from "../schemas/followup.schema";
 import type { AuthenticatedEmployee } from "./auth.service";
+import { createNotification } from "./notification.service";
 
 export interface FollowUpRecord {
   id: string;
@@ -126,6 +127,15 @@ export async function createFollowUp(
       input.relatedId,
     )
     .run();
+
+  if (input.reminder) {
+    await createNotification(db, {
+      type: "FOLLOW_UP",
+      title: "Follow-up reminder",
+      description: `${input.title} with ${relatedName} is scheduled for ${input.date} at ${input.time}.`,
+      targetId: id,
+    });
+  }
 
   const row = await db
     .prepare(`
