@@ -49,7 +49,7 @@ export type UpdateLeadInput = Partial<
 
 export interface ConvertLeadResponse {
   success: true;
-  data: {
+  data?: {
     customerId: string;
     leadId: string;
   };
