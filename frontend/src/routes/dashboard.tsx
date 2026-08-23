@@ -1,16 +1,7 @@
 import { useMemo, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import {
-  CalendarClock,
-  CheckCircle2,
-  AlertTriangle,
-  IndianRupee,
-  Package,
-  ShoppingBag,
-  UserPlus,
-  UserRound,
-  Users,
-} from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { CalendarClock, AlertTriangle, Package, UserRound, Users } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/common/glass";
 import { StatCard } from "@/components/common/stat-card";
@@ -18,41 +9,25 @@ import { StatusChip } from "@/components/common/status-chip";
 import { DataTable, type Column } from "@/components/common/data-table";
 import { DashboardWorkflowOptions } from "@/components/dashboard/dashboard-workflow-options";
 import { useRequireAuth } from "@/hooks/use-require-auth";
-import {
-  TODAY,
-  dashboardStats,
-  employeeName,
-  employees,
-  inr,
-  statusSeries,
-} from "@/data/mock";
-import { useCrm } from "@/lib/store";
+import { getDashboardSummary, getDashboardFollowUps } from "@/api/dashboard";
+import { getLeads } from "@/api/leads";
+import { getCustomers } from "@/api/customers";
+import { getOrders } from "@/api/orders";
+import { getEmployees } from "@/api/employees";
 import { cn } from "@/lib/utils";
 import type { Lead } from "@/types";
 
 export const Route = createFileRoute("/dashboard")({
-  head: () => ({
-    meta: [
-      { title: "Dashboard · Saravana Traders CRM" },
-      {
-        name: "description",
-        content: "Business overview with leads, customers, orders, revenue and follow-up KPIs.",
-      },
-      { property: "og:title", content: "Dashboard · Saravana Traders CRM" },
-      { property: "og:description", content: "Live sales KPIs, charts and recent activity." },
-    ],
-  }),
+  head: () => ({ meta: [
+    { title: "Dashboard · Saravana Traders CRM" },
+    { name: "description", content: "Business overview with leads, customers, orders, revenue and follow-up KPIs." },
+    { property: "og:title", content: "Dashboard · Saravana Traders CRM" },
+    { property: "og:description", content: "Live sales KPIs, charts and recent activity." },
+  ] }),
   component: DashboardPage,
 });
 
-const CHART_COLORS = [
-  "var(--chart-1)",
-  "var(--chart-2)",
-  "var(--chart-3)",
-  "var(--chart-4)",
-  "var(--chart-5)",
-  "var(--teal)",
-];
+const TODAY = new Date().toISOString().slice(0, 10);
 
 function DashboardPage() {
   const user = useRequireAuth();
@@ -60,248 +35,73 @@ function DashboardPage() {
   const [board, setBoard] = useState<"leads" | "converted" | "orders" | "employees">("leads");
   const [mobileTab, setMobileTab] = useState<"Upcoming" | "Pending">("Upcoming");
 
-  const { leads, customers, orders, followUps } = useCrm();
+  const summaryQuery = useQuery({ queryKey: ["dashboard", "summary"], queryFn: getDashboardSummary, enabled: Boolean(user) });
+  const followUpsQuery = useQuery({ queryKey: ["dashboard", "follow-ups"], queryFn: () => getDashboardFollowUps(), enabled: Boolean(user) });
+  const leadsQuery = useQuery({ queryKey: ["leads"], queryFn: getLeads, enabled: Boolean(user) });
+  const customersQuery = useQuery({ queryKey: ["customers"], queryFn: getCustomers, enabled: Boolean(user) });
+  const ordersQuery = useQuery({ queryKey: ["orders"], queryFn: getOrders, enabled: Boolean(user) });
+  const employeesQuery = useQuery({ queryKey: ["employees"], queryFn: getEmployees, enabled: Boolean(user) });
+
+  const summary = summaryQuery.data;
+  const leads = leadsQuery.data ?? [];
+  const customers = customersQuery.data ?? [];
+  const orders = ordersQuery.data ?? [];
+  const employees = employeesQuery.data ?? [];
+  const followUps = followUpsQuery.data ?? [];
+
+  const employeeName = (id: string) => employees.find((e) => e.id === id)?.name ?? "Unassigned";
+  const relatedName = (type: "Lead" | "Customer", id: string) =>
+    type === "Lead" ? leads.find((l) => l.id === id)?.name ?? id : customers.find((c) => c.id === id)?.name ?? id;
 
   const boardRows = useMemo(() => {
     if (board === "converted") return leads.filter((l) => l.status === "Converted");
-    if (board === "orders")
-      return orders
-        .filter((o) => o.status !== "Cancelled")
-        .slice(0, 40)
-        .map<Lead>((o) => ({
-          id: o.id,
-          name: o.customerName,
-          company: o.company,
-          phone: "—",
-          email: "—",
-          address: o.address,
-          material: o.material,
-          units: o.units,
-          quantity: o.quantity,
-          duration: o.deliveryDate,
-          notes: o.notes,
-          employeeId: o.employeeId,
-          status: "Converted",
-          source: "Order",
-          createdAt: o.createdAt,
-          feedback: `${o.paymentStatus} · ${o.status}`,
-        }));
-    if (board === "employees")
-      return employees.slice(0, 25).map<Lead>((e) => ({
-        id: e.id,
-        name: e.name,
-        company: e.designation,
-        phone: e.phone,
-        email: e.email,
-        address: "—",
-        material: "—",
-        units: "—",
-        quantity: leads.filter((l) => l.employeeId === e.id).length,
-        duration: e.status,
-        notes: "",
-        employeeId: e.id,
-        status: "New",
-        source: e.role,
-        createdAt: e.createdAt,
-        feedback: `${orders.filter((o) => o.employeeId === e.id).length} orders handled`,
-      }));
+    if (board === "orders") return orders.filter((o) => o.status !== "Cancelled").slice(0, 40).map<Lead>((o) => ({
+      id: o.id, name: o.customerName, company: o.company, phone: "—", email: "—", address: o.address,
+      material: o.material, units: o.units, quantity: o.quantity, duration: o.deliveryDate, notes: o.notes,
+      employeeId: o.employeeId, status: "Converted", source: "Order", createdAt: o.createdAt,
+      feedback: `${o.paymentStatus} · ${o.status}`,
+    }));
+    if (board === "employees") return employees.slice(0, 25).map<Lead>((e) => ({
+      id: e.id, name: e.name, company: e.designation, phone: e.phone, email: e.email, address: "—",
+      material: "—", units: "—", quantity: leads.filter((l) => l.employeeId === e.id).length, duration: e.status,
+      notes: "", employeeId: e.id, status: "New", source: e.role, createdAt: e.createdAt,
+      feedback: `${orders.filter((o) => o.employeeId === e.id).length} orders handled`,
+    }));
     return leads;
-  }, [board, leads, orders]);
+  }, [board, employees, leads, orders]);
 
   const boardColumns: Column<Lead>[] = [
-    { key: "name", header: "Name" },
-    { key: "phone", header: "Contact" },
-    { key: "company", header: "Company" },
-    { key: "material", header: "Material Required" },
-    { key: "quantity", header: "Quantity" },
-    { key: "units", header: "Units" },
-    { key: "duration", header: "Duration" },
-    { key: "status", header: "Status", render: (r) => <StatusChip value={r.status} /> },
-    {
-      key: "employeeId",
-      header: "Assigned Employee",
-      value: (r) => employeeName(r.employeeId),
-      render: (r) => employeeName(r.employeeId),
-    },
+    { key: "name", header: "Name" }, { key: "phone", header: "Contact" }, { key: "company", header: "Company" },
+    { key: "material", header: "Material Required" }, { key: "quantity", header: "Quantity" }, { key: "units", header: "Units" },
+    { key: "duration", header: "Duration" }, { key: "status", header: "Status", render: (r) => <StatusChip value={r.status} /> },
+    { key: "employeeId", header: "Assigned Employee", value: (r) => employeeName(r.employeeId), render: (r) => employeeName(r.employeeId) },
     { key: "feedback", header: "Feedback", className: "max-w-[240px] truncate" },
-    {
-      key: "followup",
-      header: "Follow-up",
-      render: (r) => (
-        <span className="text-xs text-muted-foreground">
-          {followUps.find((f) => f.relatedId === r.id)?.date ?? "Not scheduled"}
-        </span>
-      ),
-    },
+    { key: "followup", header: "Follow-up", render: (r) => <span className="text-xs text-muted-foreground">{followUps.find((f) => f.relatedId === r.id)?.date ?? "Not scheduled"}</span> },
   ];
 
-  const upcoming = followUps
-    .filter((f) => f.status !== "Completed" && (f.date >= TODAY || f.status === "Missed"))
-    .slice(0, 6);
+  const upcoming = followUps.filter((f) => f.status !== "Completed" && (f.date >= TODAY || f.status === "Missed")).slice(0, 6);
   const missed = followUps.filter((f) => f.date < TODAY && f.status === "Pending").slice(0, 6);
+  const dataError = summaryQuery.error ?? followUpsQuery.error ?? leadsQuery.error ?? customersQuery.error ?? ordersQuery.error ?? employeesQuery.error;
+  const loading = summaryQuery.isPending || followUpsQuery.isPending || leadsQuery.isPending || customersQuery.isPending || ordersQuery.isPending || employeesQuery.isPending;
 
   if (!user) return null;
+  if (loading) return <AppShell><div className="glass rounded-2xl p-8 text-center text-sm text-muted-foreground">Loading dashboard...</div></AppShell>;
+  if (dataError || !summary) return <AppShell><div className="glass rounded-2xl p-8 text-center"><p className="font-medium">Unable to load dashboard</p><p className="mt-1 text-sm text-muted-foreground">{dataError instanceof Error ? dataError.message : "Please try again."}</p></div></AppShell>;
 
-  return (
-    <AppShell>
-      <div className="space-y-5">
-        <PageHeader
-          title={`Good day, ${user.name.split(" ")[0]}`}
-          subtitle={`${user.role} workspace · business overview for ${TODAY}`}
-        />
-
-        <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <StatCard
-            label="Today's Meetings"
-            value={dashboardStats.todaysMeetings}
-            icon={CalendarClock}
-            tone="coral"
-            delay={0}
-          />
-          <StatCard
-            label="Orders"
-            value={dashboardStats.orders}
-            icon={Package}
-            tone="teal"
-            delay={60}
-          />
-          <StatCard
-            label="Customers"
-            value={dashboardStats.customers}
-            icon={UserRound}
-            tone="sky"
-            delay={120}
-          />
-          <StatCard
-            label="Total Leads"
-            value={dashboardStats.totalLeads}
-            icon={Users}
-            tone="teal"
-            delay={180}
-          />
-        </section>
-
-        <section className="space-y-3">
-          <DataTable
-            rows={boardRows}
-            columns={boardColumns}
-            rowKey={(r) => r.id}
-            searchPlaceholder="Search this board…"
-            sortMenuExtra={
-              <DashboardWorkflowOptions activeBoard={board} onSelect={(b) => setBoard(b)} />
-            }
-            onRowClick={(r) =>
-              board === "employees"
-                ? navigate({ to: "/employees/$id", params: { id: r.id } })
-                : board === "orders"
-                  ? navigate({ to: "/orders" })
-                  : navigate({ to: "/leads/$id", params: { id: r.id } })
-            }
-          />
-        </section>
-
-        <section className="grid gap-3 xl:grid-cols-2">
-          <div className="md:hidden xl:col-span-2">
-            <div className="mb-1 flex items-center gap-1 rounded-full bg-white/55 p-1 glass-soft">
-              <button
-                onClick={() => setMobileTab("Upcoming")}
-                className={cn(
-                  "flex-1 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors",
-                  mobileTab === "Upcoming"
-                    ? "bg-mint/40 text-teal"
-                    : "text-muted-foreground hover:text-foreground",
-                )}
-              >
-                Upcoming
-              </button>
-              <button
-                onClick={() => setMobileTab("Pending")}
-                className={cn(
-                  "flex-1 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors",
-                  mobileTab === "Pending"
-                    ? "bg-mint/40 text-teal"
-                    : "text-muted-foreground hover:text-foreground",
-                )}
-              >
-                Pending
-              </button>
-            </div>
-          </div>
-
-          <div
-            className={cn(
-              "glass rounded-2xl p-4",
-              mobileTab === "Upcoming" ? "block" : "hidden md:block",
-            )}
-          >
-            <div className="mb-3 flex items-center justify-between">
-              <p className="text-sm font-semibold">Upcoming meetings & follow-ups</p>
-              <button
-                onClick={() => navigate({ to: "/calendar" })}
-                className="text-xs font-medium text-primary hover:underline"
-              >
-                Open calendar →
-              </button>
-            </div>
-            <div className="space-y-2">
-              {upcoming.map((f) => (
-                <div
-                  key={f.id}
-                  className="flex items-center justify-between gap-3 rounded-xl bg-white/55 px-3 py-2"
-                >
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium">{f.title}</p>
-                    <p className="truncate text-xs text-muted-foreground">
-                      {f.relatedName} · {f.date} · {f.time}
-                    </p>
-                  </div>
-                  <StatusChip value={f.status} />
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div
-            className={cn(
-              "glass rounded-2xl border border-coral/40 bg-coral/5 p-4",
-              mobileTab === "Pending" ? "block" : "hidden md:block",
-            )}
-          >
-            <div className="mb-3 flex items-center justify-between">
-              <p className="flex items-center gap-2 text-sm font-semibold text-coral">
-                <AlertTriangle className="size-4" /> Pending follow-ups
-              </p>
-              <button
-                onClick={() => navigate({ to: "/calendar" })}
-                className="text-xs font-medium text-coral hover:underline"
-              >
-                View all →
-              </button>
-            </div>
-            <div className="space-y-2">
-              {missed.map((f) => (
-                <div
-                  key={f.id}
-                  className="flex items-center justify-between gap-3 rounded-xl bg-white/70 px-3 py-2"
-                >
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium">{f.title}</p>
-                    <p className="truncate text-xs text-muted-foreground">
-                      missed {f.date} · {f.relatedName}
-                    </p>
-                  </div>
-                  <StatusChip value={f.priority} />
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <p className="pb-2 text-center text-xs text-muted-foreground">
-          {customers.length} customers · {orders.length} orders · {followUps.length} follow-ups
-          tracked
-        </p>
-      </div>
-    </AppShell>
-  );
+  return <AppShell><div className="space-y-5">
+    <PageHeader title={`Good day, ${user.name.split(" ")[0]}`} subtitle={`${user.role} workspace · business overview for ${TODAY}`} />
+    <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <StatCard label="Today's Meetings" value={summary.followUps.today ?? 0} icon={CalendarClock} tone="coral" delay={0} />
+      <StatCard label="Orders" value={summary.orders.total} icon={Package} tone="teal" delay={60} />
+      <StatCard label="Customers" value={summary.customers.total} icon={UserRound} tone="sky" delay={120} />
+      <StatCard label="Total Leads" value={summary.leads.total} icon={Users} tone="teal" delay={180} />
+    </section>
+    <section className="space-y-3"><DataTable rows={boardRows} columns={boardColumns} rowKey={(r) => r.id} searchPlaceholder="Search this board…" sortMenuExtra={<DashboardWorkflowOptions activeBoard={board} onSelect={(b) => setBoard(b)} />} onRowClick={(r) => board === "employees" ? navigate({ to: "/employees/$id", params: { id: r.id } }) : board === "orders" ? navigate({ to: "/orders" }) : navigate({ to: "/leads/$id", params: { id: r.id } })} /></section>
+    <section className="grid gap-3 xl:grid-cols-2">
+      <div className="md:hidden xl:col-span-2"><div className="mb-1 flex items-center gap-1 rounded-full bg-white/55 p-1 glass-soft"><button onClick={() => setMobileTab("Upcoming")} className={cn("flex-1 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors", mobileTab === "Upcoming" ? "bg-mint/40 text-teal" : "text-muted-foreground hover:text-foreground")}>Upcoming</button><button onClick={() => setMobileTab("Pending")} className={cn("flex-1 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors", mobileTab === "Pending" ? "bg-mint/40 text-teal" : "text-muted-foreground hover:text-foreground")}>Pending</button></div></div>
+      <div className={cn("glass rounded-2xl p-4", mobileTab === "Upcoming" ? "block" : "hidden md:block")}><div className="mb-3 flex items-center justify-between"><p className="text-sm font-semibold">Upcoming meetings & follow-ups</p><button onClick={() => navigate({ to: "/calendar" })} className="text-xs font-medium text-primary hover:underline">Open calendar →</button></div><div className="space-y-2">{upcoming.map((f) => <div key={f.id} className="flex items-center justify-between gap-3 rounded-xl bg-white/55 px-3 py-2"><div className="min-w-0"><p className="truncate text-sm font-medium">{f.title}</p><p className="truncate text-xs text-muted-foreground">{relatedName(f.relatedType, f.relatedId)} · {f.date} · {f.time}</p></div><StatusChip value={f.status} /></div>)}{upcoming.length === 0 && <p className="rounded-xl border border-dashed p-5 text-center text-sm text-muted-foreground">No upcoming follow-ups.</p>}</div></div>
+      <div className={cn("glass rounded-2xl border border-coral/40 bg-coral/5 p-4", mobileTab === "Pending" ? "block" : "hidden md:block")}><div className="mb-3 flex items-center justify-between"><p className="flex items-center gap-2 text-sm font-semibold text-coral"><AlertTriangle className="size-4" /> Pending follow-ups</p><button onClick={() => navigate({ to: "/calendar" })} className="text-xs font-medium text-coral hover:underline">View all →</button></div><div className="space-y-2">{missed.map((f) => <div key={f.id} className="flex items-center justify-between gap-3 rounded-xl bg-white/70 px-3 py-2"><div className="min-w-0"><p className="truncate text-sm font-medium">{f.title}</p><p className="truncate text-xs text-muted-foreground">missed {f.date} · {relatedName(f.relatedType, f.relatedId)}</p></div><StatusChip value={f.priority} /></div>)}{missed.length === 0 && <p className="rounded-xl border border-dashed p-5 text-center text-sm text-muted-foreground">No pending follow-ups.</p>}</div></div>
+    </section>
+    <p className="pb-2 text-center text-xs text-muted-foreground">{summary.customers.total} customers · {summary.orders.total} orders · {summary.followUps.total} follow-ups tracked</p>
+  </div></AppShell>;
 }
