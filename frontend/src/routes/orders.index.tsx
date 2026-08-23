@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/common/glass";
 import { StatusChip } from "@/components/common/status-chip";
@@ -13,37 +13,13 @@ import { getOrders, deleteOrder } from "@/api/orders";
 import { getEmployees } from "@/api/employees";
 import { toast } from "sonner";
 import type { Order, OrderStatus, PaymentStatus } from "@/types";
-
 export const Route = createFileRoute("/orders/")({ head: () => ({ meta: [{ title: "Orders · Saravana Traders CRM" }] }), component: OrdersPage });
-const PAYMENT_STATUSES: PaymentStatus[] = ["Pending", "Partial", "Paid"];
-const ORDER_STATUSES: OrderStatus[] = ["Draft", "Confirmed", "Processing", "Packed", "Dispatched", "Delivered", "Cancelled"];
-const inr = (v: number) => `₹${v.toLocaleString("en-IN")}`;
-
+const PAYMENT_STATUSES: PaymentStatus[] = ["Pending", "Partial", "Paid"]; const ORDER_STATUSES: OrderStatus[] = ["Draft", "Confirmed", "Processing", "Packed", "Dispatched", "Delivered", "Cancelled"]; const inr = (v: number) => `₹${v.toLocaleString("en-IN")}`;
 function OrdersPage() {
-  const user = useRequireAuth();
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  const [confirmDelete, setConfirmDelete] = useState(false);
-  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
-  const [payment, setPayment] = useState("All");
-  const [status, setStatus] = useState("All");
-  const [emp, setEmp] = useState("All");
-  const ordersQuery = useQuery({ queryKey: ["orders"], queryFn: getOrders, enabled: Boolean(user) });
-  const employeesQuery = useQuery({ queryKey: ["employees"], queryFn: getEmployees, enabled: Boolean(user) });
-  const deleteMutation = useMutation({ mutationFn: (id: string) => deleteOrder(id), onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ["orders"] }); setConfirmDelete(false); setDeleteTargetId(null); toast.success("Order deleted"); }, onError: (e) => toast.error(e instanceof Error ? e.message : "Unable to delete order") });
-  if (!user) return null;
-  const orders = ordersQuery.data ?? [];
-  const employees = employeesQuery.data ?? [];
-  const nameOf = (id: string) => employees.find((e) => e.id === id)?.name ?? "Unassigned";
-  const rows = orders.filter((o) => (payment === "All" || o.paymentStatus === payment) && (status === "All" || o.status === status) && (emp === "All" || nameOf(o.employeeId) === emp));
-  const columns: Column<Order>[] = [
-    { key: "customerName", header: "Customer", render: (o) => <span className="font-medium">{o.customerName}</span> },
-    { key: "material", header: "Material" }, { key: "quantity", header: "Quantity" }, { key: "units", header: "Units" },
-    { key: "value", header: "Value", render: (o) => inr(o.value) }, { key: "paymentStatus", header: "Payment", render: (o) => <StatusChip value={o.paymentStatus} /> },
-    { key: "status", header: "Order Status", render: (o) => <StatusChip value={o.status} /> },
-    { key: "employeeId", header: "Assigned Employee", value: (o) => nameOf(o.employeeId), render: (o) => nameOf(o.employeeId) }, { key: "createdAt", header: "Created" },
-  ];
-  const loading = ordersQuery.isPending || employeesQuery.isPending;
+  const user = useRequireAuth(); const navigate = useNavigate(); const queryClient = useQueryClient(); const [confirmDelete, setConfirmDelete] = useState(false); const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null); const [payment, setPayment] = useState("All"); const [status, setStatus] = useState("All"); const [emp, setEmp] = useState("All");
+  const ordersQuery = useQuery({ queryKey: ["orders"], queryFn: getOrders, enabled: Boolean(user) }); const employeesQuery = useQuery({ queryKey: ["employees"], queryFn: getEmployees, enabled: Boolean(user) }); const deleteMutation = useMutation({ mutationFn: (id: string) => deleteOrder(id), onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ["orders"] }); setConfirmDelete(false); setDeleteTargetId(null); toast.success("Order deleted"); }, onError: (e) => { setConfirmDelete(false); toast.error(e instanceof Error ? e.message : "Unable to delete order"); } });
+  if (!user) return null; const orders = ordersQuery.data ?? []; const employees = employeesQuery.data ?? []; const nameOf = (id: string) => employees.find((e) => e.id === id)?.name ?? "Unassigned"; const rows = orders.filter((o) => (payment === "All" || o.paymentStatus === payment) && (status === "All" || o.status === status) && (emp === "All" || nameOf(o.employeeId) === emp));
+  const columns: Column<Order>[] = [{ key: "customerName", header: "Customer", render: (o) => <span className="font-medium">{o.customerName}</span> },{ key: "material", header: "Material" },{ key: "quantity", header: "Quantity" },{ key: "units", header: "Units" },{ key: "value", header: "Value", render: (o) => inr(o.value) },{ key: "paymentStatus", header: "Payment", render: (o) => <StatusChip value={o.paymentStatus} /> },{ key: "status", header: "Order Status", render: (o) => <StatusChip value={o.status} /> },{ key: "employeeId", header: "Assigned Employee", value: (o) => nameOf(o.employeeId), render: (o) => nameOf(o.employeeId) },{ key: "createdAt", header: "Created" },{ key: "actions", header: "", render: (o) => <Button variant="ghost" size="icon" className="text-destructive" onClick={(e) => { e.stopPropagation(); setDeleteTargetId(o.id); setConfirmDelete(true); }}><Trash2 className="size-4" /></Button> }];
   const error = ordersQuery.error ?? employeesQuery.error;
-  return <AppShell><div className="space-y-4"><PageHeader title="Orders" subtitle={user.role === "Admin" ? `${rows.length} orders · ${inr(rows.reduce((a, o) => a + o.value, 0))} pipeline value` : `${rows.length} orders in CRM (Edit assigned only)`} actions={<Button className="gap-2 rounded-xl" onClick={() => navigate({ to: "/orders/new" })}><Plus className="size-4" /> Add Order</Button>} />{loading ? <div className="glass rounded-2xl p-8 text-center text-sm text-muted-foreground">Loading orders...</div> : error ? <div className="glass rounded-2xl p-8 text-center"><p className="font-medium">Unable to load orders</p><p className="mt-1 text-sm text-muted-foreground">{error instanceof Error ? error.message : "Please try again."}</p></div> : rows.length === 0 ? <div className="glass rounded-2xl p-8 text-center text-sm text-muted-foreground">{orders.length === 0 ? "No orders found." : "No orders match the current filters."}</div> : <DataTable rows={rows} columns={columns} rowKey={(o) => o.id} searchPlaceholder="Search orders by customer, invoice, material…" onRowClick={(o) => navigate({ to: "/orders/$id", params: { id: o.id } })} filters={[{ label: "Payment", options: PAYMENT_STATUSES, value: payment, onChange: setPayment }, { label: "Status", options: ORDER_STATUSES, value: status, onChange: setStatus }, { label: "Employee", options: employees.map((e) => e.name), value: emp, onChange: setEmp }]} />}</div><ConfirmDialog open={confirmDelete} onOpenChange={setConfirmDelete} title="Delete this order?" description="The order will be permanently removed from the register." confirmLabel={deleteMutation.isPending ? "Deleting..." : "Delete order"} destructive onConfirm={() => { if (deleteTargetId) deleteMutation.mutate(deleteTargetId); }} /></AppShell>;
+  return <AppShell><div className="space-y-4"><PageHeader title="Orders" subtitle={user.role === "Admin" ? `${rows.length} orders · ${inr(rows.reduce((a, o) => a + o.value, 0))} pipeline value` : `${rows.length} orders in CRM (Edit assigned only)`} actions={<Button className="gap-2 rounded-xl" onClick={() => navigate({ to: "/orders/new" })}><Plus className="size-4" /> Add Order</Button>} />{ordersQuery.isPending || employeesQuery.isPending ? <div className="glass rounded-2xl p-8 text-center text-sm text-muted-foreground">Loading orders...</div> : error ? <div className="glass rounded-2xl p-8 text-center"><p className="font-medium">Unable to load orders</p><p className="mt-1 text-sm text-muted-foreground">{error instanceof Error ? error.message : "Please try again."}</p></div> : rows.length === 0 ? <div className="glass rounded-2xl p-8 text-center text-sm text-muted-foreground">{orders.length === 0 ? "No orders found." : "No orders match the current filters."}</div> : <DataTable rows={rows} columns={columns} rowKey={(o) => o.id} searchPlaceholder="Search orders by customer, invoice, material…" onRowClick={(o) => navigate({ to: "/orders/$id", params: { id: o.id } })} filters={[{ label: "Payment", options: PAYMENT_STATUSES, value: payment, onChange: setPayment },{ label: "Status", options: ORDER_STATUSES, value: status, onChange: setStatus },{ label: "Employee", options: employees.map((e) => e.name), value: emp, onChange: setEmp }]} />}</div><ConfirmDialog open={confirmDelete} onOpenChange={setConfirmDelete} title="Delete this order?" description="The order will be permanently removed from the register." confirmLabel={deleteMutation.isPending ? "Deleting..." : "Delete order"} destructive onConfirm={() => { if (deleteTargetId) deleteMutation.mutate(deleteTargetId); }} /></AppShell>;
 }
