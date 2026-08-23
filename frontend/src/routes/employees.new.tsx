@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Save } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/common/glass";
@@ -13,12 +14,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useRequireAuth } from "@/hooks/use-require-auth";
-import { crm, newId } from "@/lib/store";
 import { toast } from "sonner";
 import type { Employee, Role } from "@/types";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { createEmployee } from "@/api/employees";
 
 const employeeSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -27,6 +28,7 @@ const employeeSchema = z.object({
   role: z.enum(["Admin", "Employee"]),
   status: z.enum(["Active", "Inactive"]),
   designation: z.string().min(2, "Designation is required"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
 });
 
 type EmployeeFormValues = z.infer<typeof employeeSchema>;
@@ -34,7 +36,7 @@ type EmployeeFormValues = z.infer<typeof employeeSchema>;
 export const Route = createFileRoute("/employees/new")({
   head: () => ({
     meta: [
-      { title: "New employee · Saravana Traders CRM" },
+      { title: "New employee - Saravana Traders CRM" },
       { name: "description", content: "Add a new team member." },
     ],
   }),
@@ -44,6 +46,22 @@ export const Route = createFileRoute("/employees/new")({
 function NewEmployee() {
   const user = useRequireAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
+  const createEmployeeMutation = useMutation({
+    mutationFn: createEmployee,
+    onSuccess: async (employee) => {
+      queryClient.setQueryData<Employee[]>(["employees"], (current) =>
+        current ? [employee, ...current] : current,
+      );
+      await queryClient.invalidateQueries({ queryKey: ["employees"] });
+      toast.success("Employee added successfully");
+      navigate({ to: "/employees" });
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "Unable to add employee");
+    },
+  });
 
   const {
     register,
@@ -59,6 +77,7 @@ function NewEmployee() {
       role: "Employee",
       status: "Active",
       designation: "Sales Executive",
+      password: "",
     },
   });
 
@@ -75,20 +94,17 @@ function NewEmployee() {
   }
 
   const onSubmit = (data: EmployeeFormValues) => {
-    const newEmp: Employee = {
-      id: newId("EMP"),
+    createEmployeeMutation.mutate({
       name: data.name,
       email: data.email,
       phone: data.phone,
       role: data.role as Role,
       status: data.status,
       designation: data.designation,
-      createdAt: new Date().toISOString().slice(0, 10),
+      password: data.password,
+      about: "",
       avatarHue: Math.floor(Math.random() * 360),
-    };
-    crm.addEmployee(newEmp);
-    toast.success("Employee added successfully");
-    navigate({ to: "/employees" });
+    });
   };
 
   return (
@@ -160,6 +176,20 @@ function NewEmployee() {
             </div>
 
             <div className="space-y-1.5">
+              <Label htmlFor="password">Temporary password</Label>
+              <Input
+                id="password"
+                type="password"
+                {...register("password")}
+                className={`h-10 border bg-white/70 ${errors.password ? "border-destructive" : "border-transparent"}`}
+                placeholder="Minimum 8 characters"
+              />
+              {errors.password && (
+                <span className="text-xs text-destructive">{errors.password.message}</span>
+              )}
+            </div>
+
+            <div className="space-y-1.5">
               <Label>Role</Label>
               <Controller
                 control={control}
@@ -205,8 +235,13 @@ function NewEmployee() {
           </div>
 
           <div className="mt-6 flex flex-wrap gap-2">
-            <Button type="submit" disabled={isSubmitting} className="gap-2 rounded-xl">
-              <Save className="size-4" /> Save Employee
+            <Button
+              type="submit"
+              disabled={isSubmitting || createEmployeeMutation.isPending}
+              className="gap-2 rounded-xl"
+            >
+              <Save className="size-4" />
+              {createEmployeeMutation.isPending ? "Saving..." : "Save Employee"}
             </Button>
             <Button
               type="button"

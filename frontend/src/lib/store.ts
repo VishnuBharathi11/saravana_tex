@@ -67,11 +67,13 @@ function subscribe(cb: () => void) {
 
 const getSnapshot = () => state;
 
-export const getCurrentUser = (): Employee | null => {
-  if (typeof window === "undefined") return null;
-  const id = localStorage.getItem("st-crm-user");
-  return state.employees.find((e) => e.id === id) || null;
-};
+let currentUser: Employee | null = null;
+
+export function setCurrentUser(user: Employee | null) {
+  currentUser = user;
+}
+
+export const getCurrentUser = (): Employee | null => currentUser;
 
 /** Whole-store subscription — the snapshot object identity is stable between writes. */
 export function useCrm(): CrmState {
@@ -225,7 +227,6 @@ export const crm = {
   deleteEmployee(id: string, transferToId?: string) {
     const user = getCurrentUser();
     if (!canManageEmployees(user)) return;
-    
     let nextLeads = state.leads;
     let nextCustomers = state.customers;
     let nextOrders = state.orders;
@@ -289,9 +290,7 @@ export const crm = {
   },
   markNotificationAsRead(id: string) {
     set({
-      notifications: state.notifications.map((n) =>
-        n.id === id ? { ...n, read: true } : n
-      ),
+      notifications: state.notifications.map((n) =>n.id===id?{...n,read:true}:n),
     });
   },
 };

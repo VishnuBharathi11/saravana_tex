@@ -47,10 +47,11 @@ const demoAccounts = [
   }));
 
 function LoginPage() {
-  const { login, loginAs, user, ready } = useAuth();
+  const { login, user, ready } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (ready && user) navigate({ to: "/dashboard" });
@@ -98,16 +99,24 @@ function LoginPage() {
 
         <form
           className="p-5 sm:p-8 flex flex-col min-w-0"
-          onSubmit={(e) => {
+          onSubmit={async (e) => {
             e.preventDefault();
-            login(email);
-            toast.success("Welcome back to Saravana Traders CRM");
-            navigate({ to: "/dashboard" });
+            setSubmitting(true);
+
+            try {
+              await login(email, password);
+              toast.success("Welcome back to Saravana Traders CRM");
+              navigate({ to: "/dashboard" });
+            } catch (error) {
+              toast.error(error instanceof Error ? error.message : "Unable to sign in");
+            } finally {
+              setSubmitting(false);
+            }
           }}
         >
           <h1 className="font-display text-2xl font-bold">Sign in</h1>
           <p className="mt-1 text-xs text-muted-foreground">
-            Use any email to explore. Leave blank to sign in as Admin.
+            Use your CRM email and password to continue.
           </p>
 
           <div className="mt-6 space-y-4">
@@ -154,8 +163,13 @@ function LoginPage() {
               </button>
             </div>
 
-            <Button type="submit" className="h-11 w-full gap-2 rounded-xl">
-              Sign in <ArrowRight className="size-4" />
+            <Button
+              type="submit"
+              disabled={!ready || submitting}
+              className="h-11 w-full gap-2 rounded-xl"
+            >
+              {!ready ? "Checking session..." : submitting ? "Signing in..." : "Sign in"}
+              <ArrowRight className="size-4" />
             </Button>
           </div>
 
@@ -173,11 +187,23 @@ function LoginPage() {
                 <button
                   key={d.id}
                   type="button"
-                  onClick={() => {
-                    loginAs(d.id);
-                    toast.success(`Signed in as ${d.name} · ${d.role}`);
-                    navigate({ to: "/dashboard" });
+                  onClick={async () => {
+                    const demoPassword = d.role === "Admin" ? "Admin@12345!" : "Employee@12345!";
+                    setEmail(d.email);
+                    setPassword(demoPassword);
+                    setSubmitting(true);
+
+                    try {
+                      await login(d.email, demoPassword);
+                      toast.success(`Signed in as ${d.name} · ${d.role}`);
+                      navigate({ to: "/dashboard" });
+                    } catch (error) {
+                      toast.error(error instanceof Error ? error.message : "Unable to sign in");
+                    } finally {
+                      setSubmitting(false);
+                    }
                   }}
+                  disabled={!ready || submitting}
                   className="glass-soft lift flex w-full min-w-0 items-center gap-2 rounded-xl px-3 py-2.5 text-left"
                 >
                   <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-mint to-sky/60 text-[11px] font-bold">

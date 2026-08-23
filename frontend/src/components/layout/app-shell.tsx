@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect, useSyncExternalStore, type ReactNode } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import {
   Bell,
@@ -31,7 +32,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 import { crm, useCrm } from "@/lib/store";
-import { customers, employees, followUps, leads, orders } from "@/data/mock";
+import { customers, followUps, leads, orders } from "@/data/mock";
+import { getEmployees } from "@/api/employees";
 import { FollowUpDetailDialog } from "@/components/common/followup-detail-dialog";
 import { toast } from "sonner";
 import type { AppNotification } from "@/types";
@@ -116,6 +118,10 @@ function NavList({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: (
 function GlobalSearch() {
   const [q, setQ] = useState("");
   const navigate = useNavigate();
+  const employeesQuery = useQuery({
+    queryKey: ["employees"],
+    queryFn: getEmployees,
+  });
 
   const results = useMemo(() => {
     const term = q.trim().toLowerCase();
@@ -139,8 +145,13 @@ function GlobalSearch() {
       )
       .slice(0, 3)
       .forEach((o) =>
-        out.push({ label: `${o.invoiceNumber} · ${o.customerName}`, kind: "Order", to: `/orders/${o.id}` }),
+        out.push({
+          label: `${o.invoiceNumber} · ${o.customerName}`,
+          kind: "Order",
+          to: `/orders/${o.id}`,
+        }),
       );
+    const employees = employeesQuery.data ?? [];
     employees
       .filter((e) => e.name.toLowerCase().includes(term))
       .slice(0, 3)
@@ -154,7 +165,7 @@ function GlobalSearch() {
         out.push({ label: `${f.title} · ${f.relatedName}`, kind: "Follow-up", to: "/calendar" }),
       );
     return out.slice(0, 10);
-  }, [q]);
+  }, [q, employeesQuery.data]);
 
   return (
     <Popover open={results.length > 0}>
@@ -264,7 +275,7 @@ function NotificationBell() {
                 onClick={() => handleNotificationClick(n)}
                 className={cn(
                   "block w-full rounded-lg px-3 py-2 text-left transition-colors",
-                  !n.read ? "bg-mint/30" : "hover:bg-muted"
+                  !n.read ? "bg-mint/30" : "hover:bg-muted",
                 )}
               >
                 <div className="flex items-center justify-between gap-2">
@@ -278,10 +289,7 @@ function NotificationBell() {
         </PopoverContent>
       </Popover>
 
-      <FollowUpDetailDialog
-        detail={detailFollowUp}
-        onClose={() => setOpenDetailId(null)}
-      />
+      <FollowUpDetailDialog detail={detailFollowUp} onClose={() => setOpenDetailId(null)} />
     </>
   );
 }

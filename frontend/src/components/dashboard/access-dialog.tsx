@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { crm } from "@/lib/store";
+import { useEffect, useMemo, useState } from "react";
+import { useMutation, useQueries, useQueryClient } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
@@ -21,23 +21,70 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import {
+  getEmployeeAccess,
+  updateEmployeeAccess,
+} from "@/api/employees";
+import type { Employee, EmployeeAccess } from "@/types";
 
 type AccessScope = "OWN" | "SHARED" | "FULL";
 
-export function AccessDialog() {
+export function AccessDialog({ employees }: { employees: Employee[] }) {
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
   const [selectedEmpId, setSelectedEmpId] = useState<string | null>(null);
+  const [draftAccess, setDraftAccess] = useState<EmployeeAccess | null>(null);
   // On mobile: "list" | "config"
   const [mobileView, setMobileView] = useState<"list" | "config">("list");
+  const queryClient = useQueryClient();
 
-  const employees = crm.state.employees;
-  const employeeAccess = crm.state.employeeAccess;
+  const accessQueries = useQueries({
+    queries: employees.map((employee) => ({
+      queryKey: ["employees", employee.id, "access"],
+      queryFn: () => getEmployeeAccess(employee.id),
+      enabled: open,
+    })),
+  });
+
+  const accessByEmployeeId = useMemo(() => {
+    const entries = accessQueries
+      .map((query) => query.data)
+      .filter((access): access is EmployeeAccess => Boolean(access))
+      .map((access) => [access.employeeId, access] as const);
+
+    return new Map(entries);
+  }, [accessQueries]);
 
   const selectedAccess = selectedEmpId
-    ? employeeAccess.find((ea) => ea.employeeId === selectedEmpId)
+    ? accessByEmployeeId.get(selectedEmpId)
     : null;
   const selectedEmployee = selectedEmpId ? employees.find((e) => e.id === selectedEmpId) : null;
+
+  useEffect(() => {
+    if (selectedAccess) {
+      setDraftAccess({
+        employeeId: selectedAccess.employeeId,
+        scope: selectedAccess.scope,
+        sharedEmployeeIds: selectedAccess.sharedEmployeeIds,
+      });
+    }
+  }, [selectedAccess]);
+
+  const updateAccessMutation = useMutation({
+    mutationFn: (access: EmployeeAccess) =>
+      updateEmployeeAccess(access.employeeId, {
+        scope: access.scope,
+        sharedEmployeeIds: access.sharedEmployeeIds,
+      }),
+    onSuccess: (access) => {
+      queryClient.setQueryData(["employees", access.employeeId, "access"], access);
+      toast.success("Access permissions saved");
+      setOpen(false);
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "Unable to save access permissions");
+    },
+  });
 
   const scopeLabel = (scope: string) =>
     scope === "FULL" ? "Full Access" : scope === "SHARED" ? "Shared Records" : "Own Records";
@@ -50,6 +97,7 @@ export function AccessDialog() {
   function handleBack() {
     setMobileView("list");
     setSelectedEmpId(null);
+    setDraftAccess(null);
   }
 
   const filteredEmployees = employees.filter((e) =>
@@ -69,7 +117,7 @@ export function AccessDialog() {
       </div>
       <div className="no-scrollbar flex-1 space-y-1 overflow-y-auto p-2">
         {filteredEmployees.map((e) => {
-          const access = employeeAccess.find((ea) => ea.employeeId === e.id);
+          const access = accessByEmployeeId.get(e.id);
           return (
             <button
               key={e.id}
@@ -98,7 +146,7 @@ export function AccessDialog() {
 
   const ConfigPanel = (
     <div className="flex min-w-0 flex-col">
-      {selectedEmpId && selectedAccess ? (
+      {selectedEmpId && draftAccess ? (
         <div className="flex flex-1 flex-col p-4">
           <h3 className="mb-4 font-semibold">Access Scope for {selectedEmployee?.name}</h3>
 
@@ -106,9 +154,17 @@ export function AccessDialog() {
             <div className="space-y-2">
               <Label>Scope</Label>
               <Select
-                value={selectedAccess.scope}
+                value={draftAccess.scope}
                 onValueChange={(val: AccessScope) => {
-                  crm.updateEmployeeAccess(selectedEmpId, { scope: val });
+                  setDraftAccess((access) =>
+                    access
+                      ? {
+                          ...access,
+                          scope: val,
+                          sharedEmployeeIds: val === "SHARED" ? access.sharedEmployeeIds : [],
+                        }
+                      : access,
+                  );
                 }}
               >
                 <SelectTrigger className="w-full">
@@ -122,7 +178,7 @@ export function AccessDialog() {
               </Select>
             </div>
 
-            {selectedAccess.scope === "SHARED" && (
+            {draftAccess.scope === "SHARED" && (
               <div className="space-y-2">
                 <Label>Can access records owned by:</Label>
                 <div className="max-h-48 overflow-y-auto space-y-1 rounded-md border p-2">
@@ -135,16 +191,16 @@ export function AccessDialog() {
                       >
                         <input
                           type="checkbox"
-                          checked={selectedAccess.sharedEmployeeIds.includes(e.id)}
+                          checked={draftAccess.sharedEmployeeIds.includes(e.id)}
                           onChange={(ev) => {
                             const newIds = ev.target.checked
-                              ? [...selectedAccess.sharedEmployeeIds, e.id]
-                              : selectedAccess.sharedEmployeeIds.filter(
+                              ? [...draftAccess.sharedEmployeeIds, e.id]
+                              : draftAccess.sharedEmployeeIds.filter(
                                   (id: string) => id !== e.id,
                                 );
-                            crm.updateEmployeeAccess(selectedEmpId, {
-                              sharedEmployeeIds: newIds,
-                            });
+                            setDraftAccess((access) =>
+                              access ? { ...access, sharedEmployeeIds: newIds } : access,
+                            );
                           }}
                         />
                         {e.name}
@@ -158,18 +214,20 @@ export function AccessDialog() {
           <div className="mt-auto pt-4">
             <Button
               className="w-full"
+              disabled={updateAccessMutation.isPending}
               onClick={() => {
-                toast.success("Access permissions saved");
-                setOpen(false);
+                if (draftAccess) {
+                  updateAccessMutation.mutate(draftAccess);
+                }
               }}
             >
-              Save Changes
+              {updateAccessMutation.isPending ? "Saving..." : "Save Changes"}
             </Button>
           </div>
         </div>
       ) : (
         <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground p-8">
-          Select an employee to configure access
+          {selectedEmpId ? "Loading access settings..." : "Select an employee to configure access"}
         </div>
       )}
     </div>

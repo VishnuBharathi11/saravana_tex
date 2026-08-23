@@ -1,19 +1,17 @@
 import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Plus, ShieldCheck, Trash2 } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/common/glass";
-import { StatusChip } from "@/components/common/status-chip";
 import { DataTable, type Column } from "@/components/common/data-table";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -25,19 +23,23 @@ import {
 import { useRequireAuth } from "@/hooks/use-require-auth";
 import { toast } from "sonner";
 import type { Employee } from "@/types";
-import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import { AccessDialog } from "@/components/dashboard/access-dialog";
-import { crm, useCrm } from "@/lib/store";
+import {
+  deleteEmployee,
+  getEmployees,
+  updateEmployee,
+  type UpdateEmployeeInput,
+} from "@/api/employees";
 
 export const Route = createFileRoute("/employees/")({
   head: () => ({
     meta: [
-      { title: "Employees · Saravana Traders CRM" },
+      { title: "Employees - Saravana Traders CRM" },
       {
         name: "description",
         content: "Admin view of the sales team, roles, status and access control.",
       },
-      { property: "og:title", content: "Employees · Saravana Traders CRM" },
+      { property: "og:title", content: "Employees - Saravana Traders CRM" },
       { property: "og:description", content: "Team directory with roles and record level access." },
     ],
   }),
@@ -47,11 +49,46 @@ export const Route = createFileRoute("/employees/")({
 function EmployeesPage() {
   const user = useRequireAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [role, setRole] = useState("All");
   const [status, setStatus] = useState("All");
   const [empToDelete, setEmpToDelete] = useState<Employee | null>(null);
   const [transferToId, setTransferToId] = useState<string>("");
-  const { employees, leads, orders, followUps } = useCrm();
+
+  const employeesQuery = useQuery({
+    queryKey: ["employees"],
+    queryFn: getEmployees,
+    enabled: user?.role === "Admin",
+  });
+
+  const updateEmployeeMutation = useMutation({
+    mutationFn: ({ id, patch }: { id: string; patch: UpdateEmployeeInput }) =>
+      updateEmployee(id, patch),
+    onSuccess: (updated) => {
+      queryClient.setQueryData<Employee[]>(["employees"], (current) =>
+        current?.map((employee) => (employee.id === updated.id ? updated : employee)) ?? current,
+      );
+      queryClient.setQueryData(["employees", updated.id], updated);
+      toast.success(`${updated.name} updated successfully`);
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "Unable to update employee");
+    },
+  });
+
+  const deleteEmployeeMutation = useMutation({
+    mutationFn: ({ id, transferToId }: { id: string; transferToId?: string }) =>
+      deleteEmployee(id, transferToId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["employees"] });
+      toast.success("Employee deleted successfully");
+      setEmpToDelete(null);
+      setTransferToId("");
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "Unable to delete employee");
+    },
+  });
 
   if (!user) return null;
 
@@ -69,6 +106,7 @@ function EmployeesPage() {
     );
   }
 
+  const employees = employeesQuery.data ?? [];
   const rows = employees.filter(
     (e) => (role === "All" || e.role === role) && (status === "All" || e.status === status),
   );
@@ -94,10 +132,12 @@ function EmployeesPage() {
       header: "Role",
       render: (e) => (
         <Select
-          defaultValue={e.role}
+          value={e.role}
           onValueChange={(v) => {
-            crm.updateEmployee(e.id, { role: v as Employee["role"] });
-            toast.success(`${e.name} is now ${v}`);
+            updateEmployeeMutation.mutate({
+              id: e.id,
+              patch: { role: v as Employee["role"] },
+            });
           }}
         >
           <SelectTrigger
@@ -123,10 +163,12 @@ function EmployeesPage() {
       header: "Status",
       render: (e) => (
         <Select
-          defaultValue={e.status}
+          value={e.status}
           onValueChange={(v) => {
-            crm.updateEmployee(e.id, { status: v as "Active" | "Inactive" });
-            toast.success(`${e.name} is now ${v}`);
+            updateEmployeeMutation.mutate({
+              id: e.id,
+              patch: { status: v as "Active" | "Inactive" },
+            });
           }}
         >
           <SelectTrigger className="h-8 w-28 bg-white/70" onClick={(ev) => ev.stopPropagation()}>
@@ -174,10 +216,10 @@ function EmployeesPage() {
       <div className="space-y-4">
         <PageHeader
           title="Employees"
-          subtitle={`${employees.length} team members · role and access control`}
+          subtitle={`${employees.length} team members - role and access control`}
           actions={
             <>
-              <AccessDialog />
+              <AccessDialog employees={employees} />
               <Button
                 className="gap-2 rounded-xl"
                 onClick={() => navigate({ to: "/employees/new" })}
@@ -188,32 +230,49 @@ function EmployeesPage() {
           }
         />
 
-        <DataTable
-          rows={rows}
-          columns={columns}
-          rowKey={(e) => e.id}
-          searchPlaceholder="Search employees…"
-          onRowClick={(e) => navigate({ to: "/employees/$id", params: { id: e.id } })}
-          filters={[
-            {
-              label: "Role",
-              options: ["Admin", "Employee"],
-              value: role,
-              onChange: setRole,
-            },
-            {
-              label: "Status",
-              options: ["Active", "Inactive"],
-              value: status,
-              onChange: setStatus,
-            },
-          ]}
-        />
-
-        <p className="text-center text-xs text-muted-foreground">
-          Team currently manages {leads.length} leads, {orders.length} orders and {followUps.length}{" "}
-          follow-ups.
-        </p>
+        {employeesQuery.isPending ? (
+          <div className="glass rounded-2xl p-10 text-center text-sm text-muted-foreground">
+            Loading employees...
+          </div>
+        ) : employeesQuery.isError ? (
+          <div className="glass rounded-2xl p-10 text-center">
+            <p className="font-semibold">Employees could not be loaded</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {employeesQuery.error instanceof Error
+                ? employeesQuery.error.message
+                : "Please try again."}
+            </p>
+            <Button
+              variant="outline"
+              className="mt-4 rounded-xl"
+              onClick={() => employeesQuery.refetch()}
+            >
+              Retry
+            </Button>
+          </div>
+        ) : (
+          <DataTable
+            rows={rows}
+            columns={columns}
+            rowKey={(e) => e.id}
+            searchPlaceholder="Search employees..."
+            onRowClick={(e) => navigate({ to: "/employees/$id", params: { id: e.id } })}
+            filters={[
+              {
+                label: "Role",
+                options: ["Admin", "Employee"],
+                value: role,
+                onChange: setRole,
+              },
+              {
+                label: "Status",
+                options: ["Active", "Inactive"],
+                value: status,
+                onChange: setStatus,
+              },
+            ]}
+          />
+        )}
 
         <Dialog
           open={!!empToDelete}
@@ -228,56 +287,28 @@ function EmployeesPage() {
             <DialogHeader>
               <DialogTitle>Delete {empToDelete?.name}?</DialogTitle>
             </DialogHeader>
-            <div className="py-4">
-              {(() => {
-                const empLeads = leads.filter((l) => l.employeeId === empToDelete?.id).length;
-                const empCustomers = crm.state.customers.filter(
-                  (c) => c.employeeId === empToDelete?.id,
-                ).length;
-                const empOrders = orders.filter((o) => o.employeeId === empToDelete?.id).length;
-                const empFollowUps = followUps.filter(
-                  (f) => f.employeeId === empToDelete?.id,
-                ).length;
-                const totalRecords = empLeads + empCustomers + empOrders + empFollowUps;
-
-                if (totalRecords > 0) {
-                  return (
-                    <div className="space-y-4">
-                      <p className="text-sm text-muted-foreground">
-                        This employee currently manages:
-                      </p>
-                      <ul className="text-sm list-disc pl-5">
-                        {empLeads > 0 && <li>{empLeads} Leads</li>}
-                        {empCustomers > 0 && <li>{empCustomers} Customers</li>}
-                        {empFollowUps > 0 && <li>{empFollowUps} Follow-ups</li>}
-                        {empOrders > 0 && <li>{empOrders} Orders</li>}
-                      </ul>
-                      <div className="space-y-2 mt-4">
-                        <Label>Transfer records to:</Label>
-                        <Select value={transferToId} onValueChange={setTransferToId}>
-                          <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Select Employee" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {employees
-                              .filter((e) => e.id !== empToDelete?.id && e.status === "Active")
-                              .map((e) => (
-                                <SelectItem key={e.id} value={e.id}>
-                                  {e.name}
-                                </SelectItem>
-                              ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                  );
-                }
-                return (
-                  <p className="text-sm text-muted-foreground">
-                    This employee has no active records.
-                  </p>
-                );
-              })()}
+            <div className="space-y-4 py-4">
+              <p className="text-sm text-muted-foreground">
+                If this employee owns CRM records, choose another active employee to receive them
+                before deletion.
+              </p>
+              <div className="space-y-2">
+                <Label>Transfer records to</Label>
+                <Select value={transferToId} onValueChange={setTransferToId}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="No transfer" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {employees
+                      .filter((e) => e.id !== empToDelete?.id && e.status === "Active")
+                      .map((e) => (
+                        <SelectItem key={e.id} value={e.id}>
+                          {e.name}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <div className="flex justify-end gap-2">
               <Button variant="ghost" onClick={() => setEmpToDelete(null)}>
@@ -285,28 +316,22 @@ function EmployeesPage() {
               </Button>
               <Button
                 variant="destructive"
-                disabled={(() => {
-                  const empLeads = leads.filter((l) => l.employeeId === empToDelete?.id).length;
-                  const empCustomers = crm.state.customers.filter(
-                    (c) => c.employeeId === empToDelete?.id,
-                  ).length;
-                  const empOrders = orders.filter((o) => o.employeeId === empToDelete?.id).length;
-                  const empFollowUps = followUps.filter(
-                    (f) => f.employeeId === empToDelete?.id,
-                  ).length;
-                  const totalRecords = empLeads + empCustomers + empOrders + empFollowUps;
-                  return totalRecords > 0 && !transferToId;
-                })()}
+                disabled={deleteEmployeeMutation.isPending}
                 onClick={() => {
                   if (empToDelete) {
-                    crm.deleteEmployee(empToDelete.id, transferToId);
-                    toast.success("Employee deleted successfully");
+                    deleteEmployeeMutation.mutate(
+                      transferToId
+                        ? { id: empToDelete.id, transferToId }
+                        : { id: empToDelete.id },
+                    );
                   }
-                  setEmpToDelete(null);
-                  setTransferToId("");
                 }}
               >
-                {transferToId ? "Transfer & Delete" : "Delete"}
+                {deleteEmployeeMutation.isPending
+                  ? "Deleting..."
+                  : transferToId
+                    ? "Transfer & Delete"
+                    : "Delete"}
               </Button>
             </div>
           </DialogContent>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { Camera, KeyRound, Save, Mail, Phone, ShieldCheck } from "lucide-react";
 import { GlassCard } from "@/components/common/glass";
@@ -16,23 +16,33 @@ import type { Employee } from "@/types";
 interface EmployeeProfileProps {
   employee: Employee;
   editable?: boolean;
+  isSaving?: boolean;
+  showWorkload?: boolean;
+  onSave?: (
+    patch: Pick<Employee, "name" | "email" | "phone" | "designation" | "about">,
+  ) => void | Promise<void>;
 }
 
-export function EmployeeProfile({ employee, editable = false }: EmployeeProfileProps) {
-  const { leads, orders, followUps } = useCrm();
-
+export function EmployeeProfile({
+  employee,
+  editable = false,
+  isSaving = false,
+  showWorkload = true,
+  onSave,
+}: EmployeeProfileProps) {
   const [name, setName] = useState(employee.name);
   const [email, setEmail] = useState(employee.email);
   const [phone, setPhone] = useState(employee.phone);
   const [designation, setDesignation] = useState(employee.designation);
   const [about, setAbout] = useState(employee.about || "");
 
-  const myLeads = leads.filter((l) => l.employeeId === employee.id);
-  const myOrders = orders.filter((o) => o.employeeId === employee.id);
-  const myFollowUps = followUps.filter((f) => f.employeeId === employee.id);
-
-  const upcomingFollowUps = myFollowUps.filter((f) => f.status !== "Completed" && f.status !== "Missed");
-  const completedFollowUps = myFollowUps.filter((f) => f.status === "Completed");
+  useEffect(() => {
+    setName(employee.name);
+    setEmail(employee.email);
+    setPhone(employee.phone);
+    setDesignation(employee.designation);
+    setAbout(employee.about || "");
+  }, [employee]);
 
   const initials = employee.name
     .split(" ")
@@ -40,21 +50,28 @@ export function EmployeeProfile({ employee, editable = false }: EmployeeProfileP
     .join("")
     .slice(0, 2);
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    crm.updateEmployee(employee.id, {
+    const patch = {
       name,
       email,
       phone,
       designation,
       about,
-    });
+    };
+
+    if (onSave) {
+      await onSave(patch);
+      return;
+    }
+
+    crm.updateEmployee(employee.id, patch);
     toast.success("Profile updated");
   };
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-6 lg:grid-cols-[1fr_minmax(0,1.5fr)]">
+      <div className={showWorkload ? "grid gap-6 lg:grid-cols-[1fr_minmax(0,1.5fr)]" : "grid gap-6"}>
         {/* PERSONAL PROFILE AREA */}
         <div className="space-y-4">
           <GlassCard className="p-6 text-center sm:text-left" hover={false}>
@@ -86,23 +103,54 @@ export function EmployeeProfile({ employee, editable = false }: EmployeeProfileP
               {editable ? (
                 <form onSubmit={handleSave} className="grid gap-4">
                   <div className="space-y-1.5 text-left">
-                    <Label htmlFor="n" className="text-muted-foreground">Full name</Label>
-                    <Input id="n" value={name} onChange={(e) => setName(e.target.value)} className="h-10 bg-white/70" />
+                    <Label htmlFor="n" className="text-muted-foreground">
+                      Full name
+                    </Label>
+                    <Input
+                      id="n"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      className="h-10 bg-white/70"
+                    />
                   </div>
                   <div className="space-y-1.5 text-left">
-                    <Label htmlFor="e" className="text-muted-foreground">Email</Label>
-                    <Input id="e" type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="h-10 bg-white/70" />
+                    <Label htmlFor="e" className="text-muted-foreground">
+                      Email
+                    </Label>
+                    <Input
+                      id="e"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="h-10 bg-white/70"
+                    />
                   </div>
                   <div className="space-y-1.5 text-left">
-                    <Label htmlFor="p" className="text-muted-foreground">Phone</Label>
-                    <Input id="p" value={phone} onChange={(e) => setPhone(e.target.value)} className="h-10 bg-white/70" />
+                    <Label htmlFor="p" className="text-muted-foreground">
+                      Phone
+                    </Label>
+                    <Input
+                      id="p"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      className="h-10 bg-white/70"
+                    />
                   </div>
                   <div className="space-y-1.5 text-left">
-                    <Label htmlFor="d" className="text-muted-foreground">Designation</Label>
-                    <Input id="d" value={designation} onChange={(e) => setDesignation(e.target.value)} className="h-10 bg-white/70" />
+                    <Label htmlFor="d" className="text-muted-foreground">
+                      Designation
+                    </Label>
+                    <Input
+                      id="d"
+                      value={designation}
+                      onChange={(e) => setDesignation(e.target.value)}
+                      className="h-10 bg-white/70"
+                    />
                   </div>
                   <div className="space-y-1.5 text-left">
-                    <Label htmlFor="a" className="text-muted-foreground">About</Label>
+                    <Label htmlFor="a" className="text-muted-foreground">
+                      About
+                    </Label>
                     <Textarea
                       id="a"
                       rows={3}
@@ -115,12 +163,21 @@ export function EmployeeProfile({ employee, editable = false }: EmployeeProfileP
                       {about.length}/200
                     </div>
                   </div>
-                  
+
                   <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-center">
-                    <Button type="button" variant="outline" className="flex-1 rounded-xl bg-white/50" onClick={() => toast("Password reset workflow mocked")}>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="flex-1 rounded-xl bg-white/50"
+                      onClick={() => toast("Password reset workflow mocked")}
+                    >
                       Change Password
                     </Button>
-                    <Button type="submit" className="flex-1 gap-2 rounded-xl">
+                    <Button
+                      type="submit"
+                      disabled={isSaving}
+                      className="flex-1 gap-2 rounded-xl"
+                    >
                       <Save className="size-4" /> Save Changes
                     </Button>
                   </div>
@@ -166,25 +223,44 @@ export function EmployeeProfile({ employee, editable = false }: EmployeeProfileP
           </GlassCard>
         </div>
 
-        {/* CRM WORKLOAD AREA */}
-        <div className="min-w-0 space-y-4">
-          <GlassCard className="p-4 sm:p-6" hover={false}>
-            <Tabs defaultValue="followups">
+        {showWorkload && (
+          <EmployeeWorkload employee={employee} />
+        )}
+      </div>
+    </div>
+  );
+}
+
+function EmployeeWorkload({ employee }: { employee: Employee }) {
+  const { leads, orders, followUps } = useCrm();
+  const myLeads = leads.filter((l) => l.employeeId === employee.id);
+  const myOrders = orders.filter((o) => o.employeeId === employee.id);
+  const myFollowUps = followUps.filter((f) => f.employeeId === employee.id);
+
+  const upcomingFollowUps = myFollowUps.filter(
+    (f) => f.status !== "Completed" && f.status !== "Missed",
+  );
+  const completedFollowUps = myFollowUps.filter((f) => f.status === "Completed");
+
+  return (
+    <div className="min-w-0 space-y-4">
+      <GlassCard className="p-4 sm:p-6" hover={false}>
+        <Tabs defaultValue="followups">
               <TabsList className="mb-4 h-auto flex-wrap justify-start gap-2 rounded-xl bg-transparent p-0 text-left">
-                <TabsTrigger 
-                  value="followups" 
+                <TabsTrigger
+                  value="followups"
                   className="rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-sm"
                 >
                   Follow-ups ({myFollowUps.length})
                 </TabsTrigger>
-                <TabsTrigger 
-                  value="leads" 
+                <TabsTrigger
+                  value="leads"
                   className="rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-sm"
                 >
                   Leads Owned ({myLeads.length})
                 </TabsTrigger>
-                <TabsTrigger 
-                  value="orders" 
+                <TabsTrigger
+                  value="orders"
                   className="rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-sm"
                 >
                   Orders Handled ({myOrders.length})
@@ -197,88 +273,106 @@ export function EmployeeProfile({ employee, editable = false }: EmployeeProfileP
                     <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
                     <TabsTrigger value="completed">Completed</TabsTrigger>
                   </TabsList>
-                  
+
                   <TabsContent value="upcoming" className="m-0 space-y-2">
-                    {upcomingFollowUps.length > 0 ? upcomingFollowUps.map(f => (
-                      <div key={f.id} className="flex flex-col gap-3 rounded-xl bg-white/55 p-3 sm:flex-row sm:items-center sm:justify-between">
-                        <div className="min-w-0">
-                          <p className="truncate font-medium">{f.title}</p>
-                          <p className="truncate text-xs text-muted-foreground">
-                            {f.date} {f.time} · {f.relatedName}
-                          </p>
+                    {upcomingFollowUps.length > 0 ? (
+                      upcomingFollowUps.map((f) => (
+                        <div
+                          key={f.id}
+                          className="flex flex-col gap-3 rounded-xl bg-white/55 p-3 sm:flex-row sm:items-center sm:justify-between"
+                        >
+                          <div className="min-w-0">
+                            <p className="truncate font-medium">{f.title}</p>
+                            <p className="truncate text-xs text-muted-foreground">
+                              {f.date} {f.time} · {f.relatedName}
+                            </p>
+                          </div>
+                          <StatusChip value={f.status} className="w-fit" />
                         </div>
-                        <StatusChip value={f.status} className="w-fit" />
-                      </div>
-                    )) : (
-                      <p className="p-4 text-center text-sm text-muted-foreground">No upcoming follow-ups.</p>
+                      ))
+                    ) : (
+                      <p className="p-4 text-center text-sm text-muted-foreground">
+                        No upcoming follow-ups.
+                      </p>
                     )}
                   </TabsContent>
 
                   <TabsContent value="completed" className="m-0 space-y-2">
-                    {completedFollowUps.length > 0 ? completedFollowUps.map(f => (
-                      <div key={f.id} className="flex flex-col gap-3 rounded-xl bg-white/55 p-3 sm:flex-row sm:items-center sm:justify-between opacity-80">
-                        <div className="min-w-0">
-                          <p className="truncate font-medium">{f.title}</p>
-                          <p className="truncate text-xs text-muted-foreground">
-                            {f.date} {f.time} · {f.relatedName}
-                          </p>
+                    {completedFollowUps.length > 0 ? (
+                      completedFollowUps.map((f) => (
+                        <div
+                          key={f.id}
+                          className="flex flex-col gap-3 rounded-xl bg-white/55 p-3 sm:flex-row sm:items-center sm:justify-between opacity-80"
+                        >
+                          <div className="min-w-0">
+                            <p className="truncate font-medium">{f.title}</p>
+                            <p className="truncate text-xs text-muted-foreground">
+                              {f.date} {f.time} · {f.relatedName}
+                            </p>
+                          </div>
+                          <StatusChip value={f.status} className="w-fit" />
                         </div>
-                        <StatusChip value={f.status} className="w-fit" />
-                      </div>
-                    )) : (
-                      <p className="p-4 text-center text-sm text-muted-foreground">No completed follow-ups.</p>
+                      ))
+                    ) : (
+                      <p className="p-4 text-center text-sm text-muted-foreground">
+                        No completed follow-ups.
+                      </p>
                     )}
                   </TabsContent>
                 </Tabs>
               </TabsContent>
 
               <TabsContent value="leads" className="m-0 space-y-2 outline-none text-left">
-                {myLeads.length > 0 ? myLeads.map(l => (
-                  <Link 
-                    key={l.id} 
-                    to="/leads/$id" 
-                    params={{ id: l.id }}
-                    className="flex flex-col gap-3 rounded-xl bg-white/55 p-3 transition-colors hover:bg-mint/30 sm:flex-row sm:items-center sm:justify-between"
-                  >
-                    <div className="min-w-0">
-                      <p className="truncate font-medium">{l.name}</p>
-                      <p className="truncate text-xs text-muted-foreground">
-                        {l.company} · {l.phone}
-                      </p>
-                    </div>
-                    <StatusChip value={l.status} className="w-fit" />
-                  </Link>
-                )) : (
+                {myLeads.length > 0 ? (
+                  myLeads.map((l) => (
+                    <Link
+                      key={l.id}
+                      to="/leads/$id"
+                      params={{ id: l.id }}
+                      className="flex flex-col gap-3 rounded-xl bg-white/55 p-3 transition-colors hover:bg-mint/30 sm:flex-row sm:items-center sm:justify-between"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate font-medium">{l.name}</p>
+                        <p className="truncate text-xs text-muted-foreground">
+                          {l.company} · {l.phone}
+                        </p>
+                      </div>
+                      <StatusChip value={l.status} className="w-fit" />
+                    </Link>
+                  ))
+                ) : (
                   <p className="p-4 text-center text-sm text-muted-foreground">No leads owned.</p>
                 )}
               </TabsContent>
 
               <TabsContent value="orders" className="m-0 space-y-2 outline-none text-left">
-                {myOrders.length > 0 ? myOrders.map(o => (
-                  <Link 
-                    key={o.id} 
-                    to="/orders/$id" 
-                    params={{ id: o.id }}
-                    className="flex flex-col gap-3 rounded-xl bg-white/55 p-3 transition-colors hover:bg-mint/30 sm:flex-row sm:items-center sm:justify-between"
-                  >
-                    <div className="min-w-0">
-                      <p className="truncate font-medium">
-                        {o.invoiceNumber} · {o.customerName}
-                      </p>
-                      <p className="truncate text-xs text-muted-foreground">
-                        {o.material} · {inr(o.value)} · {o.createdAt}
-                      </p>
-                    </div>
-                    <StatusChip value={o.status} className="w-fit" />
-                  </Link>
-                )) : (
-                  <p className="p-4 text-center text-sm text-muted-foreground">No orders handled.</p>
+                {myOrders.length > 0 ? (
+                  myOrders.map((o) => (
+                    <Link
+                      key={o.id}
+                      to="/orders/$id"
+                      params={{ id: o.id }}
+                      className="flex flex-col gap-3 rounded-xl bg-white/55 p-3 transition-colors hover:bg-mint/30 sm:flex-row sm:items-center sm:justify-between"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate font-medium">
+                          {o.invoiceNumber} · {o.customerName}
+                        </p>
+                        <p className="truncate text-xs text-muted-foreground">
+                          {o.material} · {inr(o.value)} · {o.createdAt}
+                        </p>
+                      </div>
+                      <StatusChip value={o.status} className="w-fit" />
+                    </Link>
+                  ))
+                ) : (
+                  <p className="p-4 text-center text-sm text-muted-foreground">
+                    No orders handled.
+                  </p>
                 )}
               </TabsContent>
-            </Tabs>
-          </GlassCard>
-        </div>
-      </div>
+        </Tabs>
+      </GlassCard>
     </div>
   );
 }

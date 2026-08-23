@@ -1,54 +1,81 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { adminUser } from "@/data/mock";
-import { useCrm, crm } from "@/lib/store";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
+import {
+  getCurrentUser,
+  login as apiLogin,
+  logout as apiLogout,
+} from "@/api/auth";
+import { setCurrentUser } from "@/lib/store";
 import type { Employee } from "@/types";
 
 interface AuthState {
   user: Employee | null;
   isAdmin: boolean;
-  login: (email: string) => void;
-  loginAs: (id: string) => void;
-  logout: () => void;
+  login: (email: string, password: string) => Promise<void>;
+  logout: () => Promise<void>;
   ready: boolean;
 }
 
 const AuthContext = createContext<AuthState | null>(null);
-const KEY = "st-crm-user";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<Employee | null>(null);
+  const [user, setUserState] = useState<Employee | null>(null);
   const [ready, setReady] = useState(false);
 
-  const { employees } = useCrm();
+  const setAuthenticatedUser = (nextUser: Employee | null) => {
+    setUserState(nextUser);
+    setCurrentUser(nextUser);
+  };
 
   useEffect(() => {
-    const id = localStorage.getItem(KEY);
-    const found = id ? employees.find((e) => e.id === id) : null;
-    setUser(found ?? null);
-    setReady(true);
-  }, [employees]);
+    let cancelled = false;
+
+    async function restoreSession() {
+      try {
+        const response = await getCurrentUser();
+
+        if (!cancelled) {
+          setAuthenticatedUser(response.employee);
+        }
+      } catch {
+        if (!cancelled) {
+          setAuthenticatedUser(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setReady(true);
+        }
+      }
+    }
+
+    void restoreSession();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const value = useMemo<AuthState>(
     () => ({
       user,
       ready,
       isAdmin: user?.role === "Admin",
-      login: (email: string) => {
-        const found = crm.state.employees.find(
-          (e) => e.email.toLowerCase() === email.trim().toLowerCase(),
-        );
-        const next = found ?? adminUser;
-        localStorage.setItem(KEY, next.id);
-        setUser(next);
+      login: async (email, password) => {
+        const response = await apiLogin(email, password);
+        setAuthenticatedUser(response.employee);
       },
-      loginAs: (id: string) => {
-        const found = crm.state.employees.find((e) => e.id === id) ?? adminUser;
-        localStorage.setItem(KEY, found.id);
-        setUser(found);
-      },
-      logout: () => {
-        localStorage.removeItem(KEY);
-        setUser(null);
+      logout: async () => {
+        try {
+          await apiLogout();
+        } finally {
+          setAuthenticatedUser(null);
+        }
       },
     }),
     [user, ready],
