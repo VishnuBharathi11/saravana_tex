@@ -1,5 +1,6 @@
 import type { CreateFollowUpInput } from "../schemas/followup.schema";
 import type { AuthenticatedEmployee } from "./auth.service";
+import { canAccessRecord } from "../middleware/authorization";
 import { createNotification } from "./notification.service";
 
 export interface FollowUpRecord {
@@ -56,6 +57,15 @@ export async function getRelatedName(
   return row?.name ?? null;
 }
 
+async function canAccessRelatedRecord(
+  db: D1Database,
+  employee: AuthenticatedEmployee,
+  type: "Lead" | "Customer",
+  id: string,
+): Promise<boolean> {
+  return canAccessRecord(db, employee, type, id);
+}
+
 export async function createFollowUp(
   db: D1Database,
   employee: AuthenticatedEmployee,
@@ -92,6 +102,17 @@ export async function createFollowUp(
 
   if (!relatedName) {
     throw new Error("Related record not found");
+  }
+
+  if (
+    !(await canAccessRelatedRecord(
+      db,
+      employee,
+      input.relatedType,
+      input.relatedId,
+    ))
+  ) {
+    throw new Error("Access denied to related record");
   }
 
   const id = `FU-${crypto.randomUUID()}`;
