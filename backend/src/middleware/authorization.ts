@@ -72,14 +72,12 @@ export async function canAccessRecord(
 	resourceType: ResourceType,
 	resourceId: string,
 ): Promise<boolean> {
-	// Admins always have access.
 	if (employee.role === 'Admin') {
 		return true;
 	}
 
 	const scope = await getEmployeeScope(db, employee.id);
 
-	// FULL scope can access every CRM record.
 	if (scope === 'FULL') {
 		return true;
 	}
@@ -102,29 +100,25 @@ export async function canAccessRecord(
 		return false;
 	}
 
-	// OWN and SHARED employees can always access their own records.
 	if (record.employee_id === employee.id) {
 		return true;
 	}
 
-	// A SHARED employee can access records explicitly granted
-	// through access_permissions.
 	if (scope === 'SHARED') {
-		const permission = await db
+		const shared = await db
 			.prepare(
 				`
         SELECT 1
-        FROM access_permissions
-        WHERE resource_type = ?
-          AND resource_id = ?
-          AND employee_id = ?
+        FROM employee_access_shared
+        WHERE employee_id = ?
+          AND shared_employee_id = ?
         LIMIT 1
         `,
 			)
-			.bind(resourceType, resourceId, employee.id)
+			.bind(employee.id, record.employee_id)
 			.first();
 
-		return permission !== null;
+		return shared !== null;
 	}
 
 	return false;
