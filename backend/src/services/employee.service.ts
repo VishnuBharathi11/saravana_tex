@@ -7,6 +7,7 @@ import type {
   UpdateEmployeeInput,
   UpdateEmployeeAccessInput,
 } from "../schemas/employee.schema";
+import { createNotification } from "./notification.service";
 
 export interface EmployeeRecord {
   id: string;
@@ -104,6 +105,13 @@ export async function createEmployee(
           : "OWN",
       ),
   ]);
+
+  await createNotification(db, {
+    type: "EMPLOYEE",
+    title: "New employee created",
+    description: `${input.name} was added as a ${input.role.toLowerCase()}.`,
+    targetId: id,
+  });
 
   const row = await db
     .prepare(`
