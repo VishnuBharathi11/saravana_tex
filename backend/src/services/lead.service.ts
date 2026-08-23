@@ -1,5 +1,6 @@
 import type { CreateLeadInput } from "../schemas/lead.schema";
 import type { AuthenticatedEmployee } from "./auth.service";
+import { createNotification } from "./notification.service";
 
 export interface LeadRecord {
   id: string;
@@ -119,6 +120,13 @@ export async function createLead(
       input.feedback,
     )
     .run();
+
+  await createNotification(db, {
+    type: "LEAD",
+    title: "New lead created",
+    description: `${input.name} from ${input.company} was added as a new lead.`,
+    targetId: id,
+  });
 
   const row = await db
     .prepare(
