@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { createFileRoute, Link, useNavigate, useParams } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, PencilLine, Trash2 } from "lucide-react";
@@ -17,8 +18,7 @@ const inr = (v: number) => `₹${v.toLocaleString("en-IN")}`;
 function Field({ label, value }: { label: string; value: string | number }) { return <div className="rounded-xl bg-white/55 px-3 py-2.5"><p className="text-[11px] tracking-wide text-muted-foreground uppercase">{label}</p><p className="mt-0.5 break-words text-sm font-medium">{value === "" ? "—" : value}</p></div>; }
 function OrderDetailPage() {
   const user = useRequireAuth(); const navigate = useNavigate(); const { id } = useParams({ from: "/orders/$id" }); const queryClient = useQueryClient();
-  const [confirmDelete, setConfirmDelete] = [false, () => {}] as const;
-  const [openDelete, setOpenDelete] = React.useState(false);
+  const [openDelete, setOpenDelete] = useState(false);
   const orderQuery = useQuery({ queryKey: ["orders", id], queryFn: () => getOrder(id), enabled: Boolean(user && id) });
   const employeesQuery = useQuery({ queryKey: ["employees"], queryFn: getEmployees, enabled: Boolean(user) });
   const deleteMutation = useMutation({ mutationFn: () => deleteOrder(id), onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ["orders"] }); queryClient.removeQueries({ queryKey: ["orders", id] }); toast.success("Order deleted"); navigate({ to: "/orders" }); }, onError: (e) => toast.error(e instanceof Error ? e.message : "Unable to delete order") });
