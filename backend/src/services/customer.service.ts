@@ -1,5 +1,6 @@
 import type { CreateCustomerInput } from "../schemas/customer.schema";
 import type { AuthenticatedEmployee } from "./auth.service";
+import { createNotification } from "./notification.service";
 
 export interface CustomerRecord {
   id: string;
@@ -146,6 +147,13 @@ export async function createCustomer(
       input.feedback,
     )
     .run();
+
+  await createNotification(db, {
+    type: "CUSTOMER",
+    title: "New customer created",
+    description: `${input.name} from ${input.company} was added as a new customer.`,
+    targetId: id,
+  });
 
   const row = await db
     .prepare(`
