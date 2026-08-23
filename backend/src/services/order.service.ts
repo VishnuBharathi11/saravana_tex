@@ -1,5 +1,6 @@
 import type { CreateOrderInput } from "../schemas/order.schema";
 import type { AuthenticatedEmployee } from "./auth.service";
+import { createNotification } from "./notification.service";
 
 export interface OrderRecord {
   id: string;
@@ -192,6 +193,13 @@ export async function createOrder(
       input.notes,
     )
     .run();
+
+  await createNotification(db, {
+    type: "ORDER",
+    title: "New order created",
+    description: `Order ${input.invoiceNumber} was created for ${customer.name}.`,
+    targetId: id,
+  });
 
   const order = await getOrderWithCustomer(db, id);
 
