@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { createFileRoute, useNavigate, useParams, Link } from "@tanstack/react-router";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, PencilLine, Save, Trash2, UserCheck, X } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
 import { IdentityHeader } from "@/components/common/identity-header";
@@ -19,10 +20,17 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useRequireAuth } from "@/hooks/use-require-auth";
-import { crm, nameOf, useCrm } from "@/lib/store";
+import { useCrm } from "@/lib/store";
 import { toast } from "sonner";
 import type { Lead, LeadStatus } from "@/types";
 import { canEditRecord, canDeleteRecord } from "@/lib/permissions";
+import {
+  convertLead,
+  deleteLead,
+  getLead,
+  updateLead,
+  type UpdateLeadInput,
+} from "@/api/leads";
 
 export const Route = createFileRoute("/leads/$id")({
   head: () => ({
@@ -63,30 +71,99 @@ function LeadDetail() {
   const user = useRequireAuth();
   const { id } = useParams({ from: "/leads/$id" });
   const navigate = useNavigate();
-  const { leads, followUps, employees } = useCrm();
-  const lead = leads.find((l) => l.id === id);
+  const queryClient = useQueryClient();
+  const { followUps } = useCrm();
+
+  const leadQuery = useQuery({
+    queryKey: ["leads", id],
+    queryFn: () => getLead(id),
+    enabled: Boolean(user && id),
+  });
 
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<Lead | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmConvert, setConfirmConvert] = useState(false);
 
+  const updateMutation = useMutation({
+    mutationFn: (patch: UpdateLeadInput) => updateLead(id, patch),
+    onSuccess: async (updated) => {
+      queryClient.setQueryData(["leads", id], updated);
+      queryClient.setQueryData<Lead[]>(["leads"], (current) =>
+        current?.map((lead) => (lead.id === updated.id ? updated : lead)) ?? current,
+      );
+      await queryClient.invalidateQueries({ queryKey: ["leads"] });
+      setEditing(false);
+      setDraft(null);
+      toast.success("Lead updated");
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "Unable to update lead");
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: () => deleteLead(id),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["leads"] });
+      queryClient.removeQueries({ queryKey: ["leads", id] });
+      toast.success("Lead deleted");
+      navigate({ to: "/leads" });
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "Unable to delete lead");
+    },
+  });
+
+  const convertMutation = useMutation({
+    mutationFn: () => convertLead(id),
+    onSuccess: async (response) => {
+      const customerId = response.data?.customerId ?? response.customerId;
+      await queryClient.invalidateQueries({ queryKey: ["leads"] });
+      if (customerId) {
+        queryClient.setQueryData<Lead>(["leads", id], (current) =>
+          current ? { ...current, status: "Converted", convertedCustomerId: customerId } : current,
+        );
+      }
+      setConfirmConvert(false);
+      if (customerId) {
+        toast.success("Lead converted to customer");
+        navigate({ to: "/customers/$id", params: { id: customerId } });
+      } else {
+        toast.success("Lead is already converted");
+      }
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "Unable to convert lead");
+    },
+  });
+
   if (!user) return null;
 
-  if (!lead) {
+  if (leadQuery.isPending) {
+    return (
+      <AppShell>
+        <div className="glass rounded-2xl p-8 text-center text-sm text-muted-foreground">Loading lead...</div>
+      </AppShell>
+    );
+  }
+
+  if (leadQuery.isError || !leadQuery.data) {
     return (
       <AppShell>
         <div className="glass rounded-2xl p-8 text-center">
-          <p className="text-sm text-muted-foreground">This lead no longer exists.</p>
-          <Link to="/leads" className="mt-3 inline-block text-sm font-medium text-primary">
-            Back to leads
-          </Link>
+          <p className="font-medium">Unable to load this lead</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {leadQuery.error instanceof Error ? leadQuery.error.message : "This lead no longer exists."}
+          </p>
+          <Link to="/leads" className="mt-3 inline-block text-sm font-medium text-primary">Back to leads</Link>
         </div>
       </AppShell>
     );
   }
 
-  const history = followUps.filter((f) => f.relatedId === lead.id);
+  const lead = leadQuery.data;
+  const history = followUps.filter((followUp) => followUp.relatedId === lead.id);
   const d = draft ?? lead;
   const upd = (patch: Partial<Lead>) => setDraft({ ...d, ...patch });
 
@@ -95,10 +172,22 @@ function LeadDetail() {
       toast.error("Name and company are required");
       return;
     }
-    crm.updateLead(lead.id, d);
-    setEditing(false);
-    setDraft(null);
-    toast.success("Lead updated");
+
+    updateMutation.mutate({
+      name: d.name,
+      company: d.company,
+      phone: d.phone,
+      email: d.email,
+      address: d.address,
+      material: d.material,
+      units: d.units,
+      quantity: d.quantity,
+      duration: d.duration,
+      notes: d.notes,
+      status: d.status,
+      source: d.source,
+      feedback: d.feedback,
+    });
   };
 
   return (
@@ -117,16 +206,14 @@ function LeadDetail() {
           actions={
             editing ? (
               <>
-                <Button className="gap-2 rounded-xl" onClick={save}>
-                  <Save className="size-4" /> Save
+                <Button className="gap-2 rounded-xl" onClick={save} disabled={updateMutation.isPending}>
+                  <Save className="size-4" /> {updateMutation.isPending ? "Saving..." : "Save"}
                 </Button>
                 <Button
                   variant="ghost"
                   className="gap-2 rounded-xl"
-                  onClick={() => {
-                    setEditing(false);
-                    setDraft(null);
-                  }}
+                  onClick={() => { setEditing(false); setDraft(null); }}
+                  disabled={updateMutation.isPending}
                 >
                   <X className="size-4" /> Cancel
                 </Button>
@@ -136,26 +223,24 @@ function LeadDetail() {
                 <Button
                   variant="outline"
                   className="glass-soft gap-2 rounded-xl border-0"
-                  onClick={() => {
-                    setDraft(lead);
-                    setEditing(true);
-                  }}
+                  onClick={() => { setDraft(lead); setEditing(true); }}
                 >
                   <PencilLine className="size-4" /> Edit
                 </Button>
                 <Button
                   className="gap-2 rounded-xl"
-                  disabled={!!lead.convertedCustomerId}
+                  disabled={!!lead.convertedCustomerId || convertMutation.isPending}
                   onClick={() => setConfirmConvert(true)}
                 >
                   <UserCheck className="size-4" />
-                  {lead.convertedCustomerId ? "Converted" : "Convert to Customer"}
+                  {lead.convertedCustomerId ? "Converted" : convertMutation.isPending ? "Converting..." : "Convert to Customer"}
                 </Button>
                 {canDeleteRecord(user, lead) && (
                   <Button
                     variant="ghost"
                     className="gap-2 rounded-xl text-destructive"
                     onClick={() => setConfirmDelete(true)}
+                    disabled={deleteMutation.isPending}
                   >
                     <Trash2 className="size-4" />
                   </Button>
@@ -197,7 +282,7 @@ function LeadDetail() {
                   <Input
                     id="quantity"
                     type="number"
-                    min={0}
+                    min={1}
                     value={d.quantity}
                     onChange={(e) => upd({ quantity: Number(e.target.value) })}
                     className="h-10 border-0 bg-white/70"
@@ -207,86 +292,35 @@ function LeadDetail() {
                 <div className="space-y-1.5">
                   <Label>Units</Label>
                   <Select value={d.units} onValueChange={(v) => upd({ units: v })}>
-                    <SelectTrigger className="h-10 w-full border-0 bg-white/70">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {UNITS.map((u) => (
-                        <SelectItem key={u} value={u}>
-                          {u}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
+                    <SelectTrigger className="h-10 w-full border-0 bg-white/70"><SelectValue /></SelectTrigger>
+                    <SelectContent>{UNITS.map((u) => <SelectItem key={u} value={u}>{u}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
 
                 <div className="space-y-1.5">
                   <Label>Duration</Label>
                   <Select value={d.duration} onValueChange={(v) => upd({ duration: v })}>
-                    <SelectTrigger className="h-10 w-full border-0 bg-white/70">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {DURATIONS.map((v) => (
-                        <SelectItem key={v} value={v}>
-                          {v}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
+                    <SelectTrigger className="h-10 w-full border-0 bg-white/70"><SelectValue /></SelectTrigger>
+                    <SelectContent>{DURATIONS.map((v) => <SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
 
                 <div className="space-y-1.5">
                   <Label>Status</Label>
                   <Select value={d.status} onValueChange={(v) => upd({ status: v as LeadStatus })}>
-                    <SelectTrigger className="h-10 w-full border-0 bg-white/70">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {STATUSES.map((s) => (
-                        <SelectItem key={s} value={s}>
-                          {s}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label>Assigned employee</Label>
-                  <Select value={d.employeeId} onValueChange={(v) => upd({ employeeId: v })}>
-                    <SelectTrigger className="h-10 w-full border-0 bg-white/70">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="max-h-64">
-                      {employees.map((e) => (
-                        <SelectItem key={e.id} value={e.id}>
-                          {e.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
+                    <SelectTrigger className="h-10 w-full border-0 bg-white/70"><SelectValue /></SelectTrigger>
+                    <SelectContent>{STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
 
                 <div className="space-y-1.5 sm:col-span-2">
                   <Label htmlFor="address">Address</Label>
-                  <Input
-                    id="address"
-                    value={d.address}
-                    onChange={(e) => upd({ address: e.target.value })}
-                    className="h-10 border-0 bg-white/70"
-                  />
+                  <Input id="address" value={d.address} onChange={(e) => upd({ address: e.target.value })} className="h-10 border-0 bg-white/70" />
                 </div>
 
                 <div className="space-y-1.5 sm:col-span-2">
                   <Label htmlFor="feedback">Feedback</Label>
-                  <Textarea
-                    id="feedback"
-                    rows={3}
-                    value={d.feedback}
-                    onChange={(e) => upd({ feedback: e.target.value })}
-                    className="border-0 bg-white/70"
-                  />
+                  <Textarea id="feedback" rows={3} value={d.feedback} onChange={(e) => upd({ feedback: e.target.value })} className="border-0 bg-white/70" />
                 </div>
               </div>
             ) : (
@@ -299,9 +333,7 @@ function LeadDetail() {
                 <Field label="Quantity" value={`${lead.quantity} ${lead.units}`} />
                 <Field label="Duration" value={lead.duration} />
                 <EmployeeLink employeeId={lead.employeeId} />
-                <div className="sm:col-span-2">
-                  <Field label="Address" value={lead.address} />
-                </div>
+                <div className="sm:col-span-2"><Field label="Address" value={lead.address} /></div>
               </div>
             )}
           </div>
@@ -309,38 +341,22 @@ function LeadDetail() {
           <div className="space-y-3">
             <div className="glass rounded-2xl p-4">
               <p className="text-sm font-semibold">Feedback</p>
-              <p className="mt-2 rounded-xl bg-white/55 px-3 py-2.5 text-sm">
-                {lead.feedback || "No feedback captured yet."}
-              </p>
+              <p className="mt-2 rounded-xl bg-white/55 px-3 py-2.5 text-sm">{lead.feedback || "No feedback captured yet."}</p>
             </div>
 
             {lead.convertedCustomerId ? (
               <div className="glass rounded-2xl p-4">
                 <p className="text-sm font-semibold">Customer account</p>
-                <Link
-                  to="/customers/$id"
-                  params={{ id: lead.convertedCustomerId }}
-                  className="mt-2 inline-block text-sm font-medium text-primary"
-                >
-                  Open converted customer →
-                </Link>
+                <Link to="/customers/$id" params={{ id: lead.convertedCustomerId }} className="mt-2 inline-block text-sm font-medium text-primary">Open converted customer →</Link>
               </div>
             ) : null}
 
             <div className="glass rounded-2xl p-4">
               <p className="text-sm font-semibold">Notes</p>
               {editing ? (
-                <Textarea
-                  className="mt-2 border-0 bg-white/70"
-                  rows={4}
-                  value={d.notes}
-                  onChange={(e) => upd({ notes: e.target.value })}
-                  placeholder="Enter notes..."
-                />
+                <Textarea className="mt-2 border-0 bg-white/70" rows={4} value={d.notes} onChange={(e) => upd({ notes: e.target.value })} placeholder="Enter notes..." />
               ) : (
-                <p className="mt-2 rounded-xl bg-white/55 px-3 py-2.5 text-sm whitespace-pre-wrap">
-                  {lead.notes || "No notes added."}
-                </p>
+                <p className="mt-2 rounded-xl bg-white/55 px-3 py-2.5 text-sm whitespace-pre-wrap">{lead.notes || "No notes added."}</p>
               )}
             </div>
           </div>
@@ -356,11 +372,7 @@ function LeadDetail() {
         description="This lead and its follow-ups will be permanently removed."
         confirmLabel="Delete lead"
         destructive
-        onConfirm={() => {
-          crm.deleteLead(lead.id);
-          toast.success("Lead deleted");
-          navigate({ to: "/leads" });
-        }}
+        onConfirm={() => deleteMutation.mutate()}
       />
 
       <ConfirmDialog
@@ -369,14 +381,7 @@ function LeadDetail() {
         title={`Convert ${lead.name} to a customer?`}
         description="Follow-up history, assigned employee and enquiry details are preserved on the new customer record."
         confirmLabel="Convert"
-        onConfirm={() => {
-          const customerId = crm.convertLead(lead.id);
-          setConfirmConvert(false);
-          if (customerId) {
-            toast.success("Lead converted to customer");
-            navigate({ to: "/customers/$id", params: { id: customerId } });
-          }
-        }}
+        onConfirm={() => convertMutation.mutate()}
       />
     </AppShell>
   );
