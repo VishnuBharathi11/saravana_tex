@@ -1,5 +1,6 @@
 import type { CreateOrderInput } from "../schemas/order.schema";
 import type { AuthenticatedEmployee } from "./auth.service";
+import { canAccessRecord } from "../middleware/authorization";
 import { createNotification } from "./notification.service";
 
 export interface OrderRecord {
@@ -128,6 +129,17 @@ export async function createOrder(
 
   if (!customer) {
     throw new Error("Customer not found");
+  }
+
+  const customerAllowed = await canAccessRecord(
+    db,
+    employee,
+    "Customer",
+    customer.id,
+  );
+
+  if (!customerAllowed) {
+    throw new Error("Access denied to customer");
   }
 
   let assignedEmployeeId = employee.id;
