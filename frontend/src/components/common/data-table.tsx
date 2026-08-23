@@ -53,6 +53,11 @@ interface Props<T> {
 
 type Sort = { key: string; dir: "asc" | "desc" } | null;
 
+function escapeCsvValue(value: string | number) {
+  const text = String(value);
+  return /[",\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+}
+
 export function DataTable<T>({
   rows,
   columns,
@@ -106,6 +111,30 @@ export function DataTable<T>({
   const pages = Math.max(1, Math.ceil(processed.length / pageSize));
   const current = Math.min(page, pages - 1);
   const slice = processed.slice(current * pageSize, current * pageSize + pageSize);
+
+  const exportCsv = () => {
+    if (processed.length === 0) {
+      toast.info("No records to export");
+      return;
+    }
+
+    const csv = [
+      visible.map((column) => escapeCsvValue(column.header)).join(","),
+      ...processed.map((row) =>
+        visible.map((column) => escapeCsvValue(cellValue(row, column))).join(","),
+      ),
+    ].join("\r\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "export.csv";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    toast.success(`Exported ${processed.length} records to CSV`);
+  };
 
   return (
     <div className="glass rounded-2xl p-3 sm:p-4">
@@ -207,7 +236,7 @@ export function DataTable<T>({
           variant="outline"
           size="sm"
           className="glass-soft h-9 gap-1.5 border-0"
-          onClick={() => toast.success(`Exported ${processed.length} records to CSV`)}
+          onClick={exportCsv}
         >
           <Download className="size-3.5" />
           <span className="hidden sm:inline">Export</span>
