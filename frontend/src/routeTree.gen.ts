@@ -26,6 +26,7 @@ import { Route as LeadsNewRouteImport } from './routes/leads.new'
 import { Route as OrdersIndexRouteImport } from './routes/orders.index'
 import { Route as OrdersIdRouteImport } from './routes/orders.$id'
 import { Route as OrdersNewRouteImport } from './routes/orders.new'
+import { Route as OrdersIdIndexRouteImport } from './routes/orders.$id.index'
 import { Route as OrdersIdEditRouteImport } from './routes/orders.$id.edit'
 
 const IndexRoute = IndexRouteImport.update({
@@ -113,6 +114,11 @@ const OrdersNewRoute = OrdersNewRouteImport.update({
   path: '/orders/new',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OrdersIdIndexRoute = OrdersIdIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => OrdersIdRoute,
+} as any)
 const OrdersIdEditRoute = OrdersIdEditRouteImport.update({
   id: '/edit',
   path: '/edit',
@@ -138,6 +144,7 @@ export interface FileRoutesByFullPath {
   '/leads/': typeof LeadsIndexRoute
   '/orders/': typeof OrdersIndexRoute
   '/orders/$id/edit': typeof OrdersIdEditRoute
+  '/orders/$id/': typeof OrdersIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -151,13 +158,13 @@ export interface FileRoutesByTo {
   '/employees/new': typeof EmployeesNewRoute
   '/leads/$id': typeof LeadsIdRoute
   '/leads/new': typeof LeadsNewRoute
-  '/orders/$id': typeof OrdersIdRouteWithChildren
   '/orders/new': typeof OrdersNewRoute
   '/customers': typeof CustomersIndexRoute
   '/employees': typeof EmployeesIndexRoute
   '/leads': typeof LeadsIndexRoute
   '/orders': typeof OrdersIndexRoute
   '/orders/$id/edit': typeof OrdersIdEditRoute
+  '/orders/$id': typeof OrdersIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -179,6 +186,7 @@ export interface FileRoutesById {
   '/leads/': typeof LeadsIndexRoute
   '/orders/': typeof OrdersIndexRoute
   '/orders/$id/edit': typeof OrdersIdEditRoute
+  '/orders/$id/': typeof OrdersIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -201,6 +209,7 @@ export interface FileRouteTypes {
     | '/leads/'
     | '/orders/'
     | '/orders/$id/edit'
+    | '/orders/$id/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -214,13 +223,13 @@ export interface FileRouteTypes {
     | '/employees/new'
     | '/leads/$id'
     | '/leads/new'
-    | '/orders/$id'
     | '/orders/new'
     | '/customers'
     | '/employees'
     | '/leads'
     | '/orders'
     | '/orders/$id/edit'
+    | '/orders/$id'
   id:
     | '__root__'
     | '/'
@@ -241,6 +250,7 @@ export interface FileRouteTypes {
     | '/leads/'
     | '/orders/'
     | '/orders/$id/edit'
+    | '/orders/$id/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -384,6 +394,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OrdersNewRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/orders/$id/': {
+      id: '/orders/$id/'
+      path: '/'
+      fullPath: '/orders/$id/'
+      preLoaderRoute: typeof OrdersIdIndexRouteImport
+      parentRoute: typeof OrdersIdRoute
+    }
     '/orders/$id/edit': {
       id: '/orders/$id/edit'
       path: '/edit'
@@ -396,10 +413,12 @@ declare module '@tanstack/react-router' {
 
 interface OrdersIdRouteChildren {
   OrdersIdEditRoute: typeof OrdersIdEditRoute
+  OrdersIdIndexRoute: typeof OrdersIdIndexRoute
 }
 
 const OrdersIdRouteChildren: OrdersIdRouteChildren = {
   OrdersIdEditRoute: OrdersIdEditRoute,
+  OrdersIdIndexRoute: OrdersIdIndexRoute,
 }
 
 const OrdersIdRouteWithChildren = OrdersIdRoute._addFileChildren(
