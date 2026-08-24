@@ -5,6 +5,7 @@ import {
   canAccessRecord,
 } from "../middleware/authorization";
 import type { AuthenticatedEmployee } from "../services/auth.service";
+import { rollOverOverdueFollowUps } from "../services/followup.service";
 
 type Bindings = {
   saravana_traders_db: D1Database;
@@ -25,6 +26,8 @@ dashboard.get("/summary", async (c) => {
   const db = c.env.saravana_traders_db;
   const employee = c.get("employee");
   const scope = await getEmployeeScope(db, employee.id);
+
+  await rollOverOverdueFollowUps(db);
 
   const [
     leadCounts,
@@ -95,7 +98,7 @@ dashboard.get("/summary", async (c) => {
           COUNT(*) AS total,
           SUM(
             CASE
-              WHEN date = date('now')
+              WHEN date = ?
                AND status <> 'Completed'
               THEN 1
               ELSE 0
@@ -110,6 +113,12 @@ dashboard.get("/summary", async (c) => {
           ) AS completed_count
         FROM follow_ups
       `)
+      .bind(new Intl.DateTimeFormat("en-CA", {
+        timeZone: "Asia/Kolkata",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      }).format(new Date()))
       .first<{
         total: number;
         today_count: number;
@@ -117,10 +126,6 @@ dashboard.get("/summary", async (c) => {
       }>(),
   ]);
 
-  // Admin and FULL scope can use the aggregate values directly.
-  // OWN/SHARED currently require record-level filtering.
-  // For the first dashboard implementation, restrict non-FULL users
-  // to their own employee-owned records.
   if (employee.role !== "Admin" && scope !== "FULL") {
     const [
       leads,
@@ -218,6 +223,8 @@ dashboard.get("/follow-ups", async (c) => {
   const db = c.env.saravana_traders_db;
   const employee = c.get("employee");
   const scope = await getEmployeeScope(db, employee.id);
+
+  await rollOverOverdueFollowUps(db);
 
   const date = c.req.query("date");
   const from = c.req.query("from");
