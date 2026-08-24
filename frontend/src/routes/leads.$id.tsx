@@ -22,6 +22,7 @@ import {
 import { useRequireAuth } from "@/hooks/use-require-auth";
 import { toast } from "sonner";
 import type { Lead, LeadStatus } from "@/types";
+import { TEXTILE_UNITS } from "@/lib/constants";
 import { getFollowUps } from "@/api/followups";
 import { canEditRecord, canDeleteRecord } from "@/lib/permissions";
 import {
@@ -55,7 +56,7 @@ const STATUSES: LeadStatus[] = [
   "Converted",
   "Lost",
 ];
-const UNITS = ["Tons", "Nos", "Bags", "Sheets", "Rolls", "Boxes"];
+const UNITS = TEXTILE_UNITS;
 const DURATIONS = ["Immediate", "1 Week", "2 Weeks", "1 Month", "Quarterly"];
 
 function Field({ label, value }: { label: string; value: string | number }) {
