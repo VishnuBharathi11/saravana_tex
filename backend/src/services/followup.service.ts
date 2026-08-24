@@ -17,6 +17,33 @@ export interface FollowUpRecord {
   related_id: string;
 }
 
+const APPLICATION_TIME_ZONE = "Asia/Kolkata";
+
+export function getApplicationLocalDate(): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: APPLICATION_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
+export async function rollOverOverdueFollowUps(
+  db: D1Database,
+): Promise<void> {
+  const today = getApplicationLocalDate();
+
+  await db
+    .prepare(`
+      UPDATE follow_ups
+      SET date = ?
+      WHERE status <> 'Completed'
+        AND date < ?
+    `)
+    .bind(today, today)
+    .run();
+}
+
 export function toFollowUpResponse(
   row: FollowUpRecord,
   relatedName: string,
