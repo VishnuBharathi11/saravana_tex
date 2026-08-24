@@ -280,7 +280,7 @@ dashboard.get("/follow-ups", async (c) => {
     priority: string;
     reminder: number;
     employee_id: string;
-    related_type: "Lead" | "Customer";
+    related_type: "Lead" | "Customer" | "Order";
     related_id: string;
   }>();
 

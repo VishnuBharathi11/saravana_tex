@@ -3,6 +3,7 @@ import { createFileRoute, Link, useNavigate, useParams } from "@tanstack/react-r
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
+  CalendarPlus,
   PencilLine,
   Trash2,
 } from "lucide-react";
@@ -17,6 +18,7 @@ import { getOrder, deleteOrder } from "@/api/orders";
 import { toast } from "sonner";
 import type { Order } from "@/types";
 import { canDeleteRecord, canEditRecord } from "@/lib/permissions";
+import { FollowUpFormDialogApi } from "@/components/common/followup-form-dialog-api";
 
 export const Route = createFileRoute("/orders/$id/")({
   head: () => ({
@@ -53,6 +55,7 @@ function OrderDetail() {
   const queryClient = useQueryClient();
 
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [openFollowUp, setOpenFollowUp] = useState(false);
 
   const orderQuery = useQuery({
     queryKey: ["orders", id],
@@ -238,6 +241,9 @@ function OrderDetail() {
                 <Field label="Quantity" value={`${order.quantity} ${order.units}`} />
                 <Field label="Total value" value={inr(order.value)} />
               </div>
+              <Button className="mt-3 w-full gap-2 rounded-xl" onClick={() => setOpenFollowUp(true)}>
+                <CalendarPlus className="size-4" /> Add Follow-up
+              </Button>
             </div>
 
             <div className="glass rounded-2xl p-4">
@@ -270,6 +276,11 @@ function OrderDetail() {
           }
           destructive
           onConfirm={() => deleteMutation.mutate()}
+        />
+        <FollowUpFormDialogApi
+          open={openFollowUp}
+          onOpenChange={setOpenFollowUp}
+          target={{ id: order.id, name: order.invoiceNumber, type: "Order" }}
         />
       </div>
     </AppShell>

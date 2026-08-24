@@ -50,8 +50,12 @@ function DashboardPage() {
   const followUps = followUpsQuery.data ?? [];
 
   const employeeName = (id: string) => employees.find((e) => e.id === id)?.name ?? "Unassigned";
-  const relatedName = (type: "Lead" | "Customer", id: string) =>
-    type === "Lead" ? leads.find((l) => l.id === id)?.name ?? id : customers.find((c) => c.id === id)?.name ?? id;
+  const relatedName = (type: "Lead" | "Customer" | "Order", id: string) =>
+    type === "Lead"
+      ? leads.find((l) => l.id === id)?.name ?? id
+      : type === "Customer"
+        ? customers.find((c) => c.id === id)?.name ?? id
+        : orders.find((o) => o.id === id)?.invoiceNumber ?? id;
 
   const boardRows = useMemo(() => {
     if (board === "converted") return leads.filter((l) => l.status === "Converted");

@@ -17,7 +17,7 @@ export const createFollowUpSchema = z.object({
   priority: z.enum(["Low", "Medium", "High"]).default("Medium"),
   reminder: z.boolean().default(false),
   employeeId: z.string().trim().min(1).optional(),
-  relatedType: z.enum(["Lead", "Customer"]),
+  relatedType: z.enum(["Lead", "Customer", "Order"]), // Updated to include Order
   relatedId: z.string().trim().min(1),
 });
 

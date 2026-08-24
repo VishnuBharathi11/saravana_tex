@@ -20,7 +20,7 @@ export interface CreateFollowUpInput {
   priority?: Priority;
   reminder?: boolean;
   employeeId?: string;
-  relatedType: "Lead" | "Customer";
+  relatedType: "Lead" | "Customer" | "Order";
   relatedId: string;
 }
 

@@ -79,7 +79,7 @@ export interface FollowUp {
   reminder: boolean;
   employeeId: string;
   relatedName: string;
-  relatedType: "Lead" | "Customer";
+  relatedType: "Lead" | "Customer" | "Order";
   relatedId: string;
 }
 

@@ -94,6 +94,7 @@ function EmployeeDetail() {
         <EmployeeProfile
           employee={employee}
           editable={canEdit}
+          canManagePassword={user.role === "Admin"}
           isSaving={updateEmployeeMutation.isPending}
           onSave={async (patch) => {
             try {
@@ -101,6 +102,9 @@ function EmployeeDetail() {
             } catch {
               // The mutation error is surfaced below through the mutation state/toast-free UI.
             }
+          }}
+          onPasswordSave={async (password) => {
+            await updateEmployeeMutation.mutateAsync({ password });
           }}
         />
         {updateEmployeeMutation.isError && (

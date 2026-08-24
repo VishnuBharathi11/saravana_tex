@@ -23,6 +23,8 @@ interface EmployeeProfileProps {
   editable?: boolean;
   isSaving?: boolean;
   showWorkload?: boolean;
+  canManagePassword?: boolean;
+  onPasswordSave?: (password: string) => void | Promise<void>;
   onSave?: (
     patch: Pick<Employee, "name" | "email" | "phone" | "designation" | "about">,
   ) => void | Promise<void>;
@@ -33,6 +35,8 @@ export function EmployeeProfile({
   editable = false,
   isSaving = false,
   showWorkload = true,
+  canManagePassword = false,
+  onPasswordSave,
   onSave,
 }: EmployeeProfileProps) {
   const queryClient = useQueryClient();
@@ -51,6 +55,7 @@ export function EmployeeProfile({
   const [phone, setPhone] = useState(employee.phone);
   const [designation, setDesignation] = useState(employee.designation);
   const [about, setAbout] = useState(employee.about || "");
+  const [password, setPassword] = useState("");
 
   useEffect(() => {
     setName(employee.name);
@@ -58,6 +63,7 @@ export function EmployeeProfile({
     setPhone(employee.phone);
     setDesignation(employee.designation);
     setAbout(employee.about || "");
+    setPassword("");
   }, [employee]);
 
   const initials = employee.name
@@ -180,14 +186,30 @@ export function EmployeeProfile({
                   </div>
 
                   <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-center">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="flex-1 rounded-xl bg-white/50"
-                      onClick={() => toast("Password reset workflow mocked")}
-                    >
-                      Change Password
-                    </Button>
+                    {canManagePassword && onPasswordSave && (
+                      <div className="flex flex-1 gap-2">
+                        <Input
+                          type="password"
+                          value={password}
+                          minLength={8}
+                          onChange={(e) => setPassword(e.target.value)}
+                          placeholder="New password"
+                          className="h-10 bg-white/70"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="shrink-0 rounded-xl bg-white/50"
+                          disabled={isSaving || !password}
+                          onClick={async () => {
+                            await onPasswordSave(password);
+                            setPassword("");
+                          }}
+                        >
+                          Set Password
+                        </Button>
+                      </div>
+                    )}
                     <Button
                       type="submit"
                       disabled={isSaving || updateMutation.isPending}

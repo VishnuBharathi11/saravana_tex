@@ -13,7 +13,7 @@ export interface FollowUpRecord {
   priority: string;
   reminder: number;
   employee_id: string;
-  related_type: "Lead" | "Customer";
+  related_type: "Lead" | "Customer" | "Order";
   related_id: string;
 }
 
@@ -66,14 +66,15 @@ export function toFollowUpResponse(
 
 export async function getRelatedName(
   db: D1Database,
-  type: "Lead" | "Customer",
+  type: "Lead" | "Customer" | "Order",
   id: string,
 ): Promise<string | null> {
-  const table = type === "Lead" ? "leads" : "customers";
+  const table = type === "Lead" ? "leads" : type === "Customer" ? "customers" : "orders";
+  const nameColumn = type === "Order" ? "invoice_number" : "name";
 
   const row = await db
     .prepare(`
-      SELECT name
+      SELECT ${nameColumn} AS name
       FROM ${table}
       WHERE id = ?
       LIMIT 1
@@ -87,7 +88,7 @@ export async function getRelatedName(
 async function canAccessRelatedRecord(
   db: D1Database,
   employee: AuthenticatedEmployee,
-  type: "Lead" | "Customer",
+  type: "Lead" | "Customer" | "Order",
   id: string,
 ): Promise<boolean> {
   return canAccessRecord(db, employee, type, id);

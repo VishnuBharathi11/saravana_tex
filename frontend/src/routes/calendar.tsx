@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { useEffect, useMemo, useState } from "react";
+import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { addDays, addMonths, endOfMonth, endOfWeek, format, isSameDay, isSameMonth, parseISO, startOfMonth, startOfWeek, subMonths } from "date-fns";
 import { AlertTriangle, ChevronLeft, ChevronRight, Plus } from "lucide-react";
@@ -16,12 +16,19 @@ import { getEmployees } from "@/api/employees";
 import { cn } from "@/lib/utils";
 import type { FollowUp } from "@/types";
 
-export const Route = createFileRoute("/calendar")({ head: () => ({ meta: [{ title: "Calendar · Saravana Traders CRM" }, { name: "description", content: "Daily, weekly and monthly follow-up scheduling." }] }), component: CalendarPage });
+export const Route = createFileRoute("/calendar")({
+  validateSearch: (search): { followUpId?: string } =>
+    typeof search["followUpId"] === "string" ? { followUpId: search["followUpId"] } : {},
+  head: () => ({ meta: [{ title: "Calendar · Saravana Traders CRM" }, { name: "description", content: "Daily, weekly and monthly follow-up scheduling." }] }),
+  component: CalendarPage,
+});
 const EVENT_COLORS: Record<string, string> = { Pending: "bg-sunbeam/35 text-[oklch(0.42_0.09_60)] border-sunbeam/60", Completed: "bg-mint/60 text-[oklch(0.36_0.07_170)] border-primary/40", Important: "bg-blush/30 text-[oklch(0.42_0.1_350)] border-blush/60", Meeting: "bg-lilac/25 text-[oklch(0.42_0.1_300)] border-lilac/55", Order: "bg-teal/25 text-[oklch(0.38_0.08_200)] border-teal/55", Reminder: "bg-sky/25 text-[oklch(0.4_0.09_245)] border-sky/55", Missed: "bg-coral/15 text-coral border-coral/40" };
 type View = "Daily" | "Weekly" | "Monthly" | "Today";
 
 function CalendarPage() {
   const user = useRequireAuth();
+  const navigate = useNavigate();
+  const { followUpId } = useSearch({ from: "/calendar" });
   const [view, setView] = useState<View>("Monthly");
   const today = parseISO(new Date().toISOString().slice(0, 10));
   const [cursor, setCursor] = useState(today);
@@ -51,6 +58,13 @@ function CalendarPage() {
   }, [selectedDay]);
   const missed = events.filter((f) => f.date < todayKey && f.status === "Pending").slice(0, 6);
   const upcoming = events.filter((f) => f.date >= todayKey).sort((a, b) => `${a.date}${a.time}`.localeCompare(`${b.date}${b.time}`)).slice(0, 8);
+
+  useEffect(() => {
+    if (!followUpId || !events.length) return;
+    const followUp = events.find((event) => event.id === followUpId);
+    if (followUp) setDetail(followUp);
+    navigate({ to: "/calendar", search: {}, replace: true });
+  }, [events, followUpId, navigate]);
 
   if (!user) return null;
   if (followUpsQuery.isPending || employeesQuery.isPending) return <AppShell plain><div className="glass rounded-2xl p-8 text-center text-sm text-muted-foreground">Loading calendar...</div></AppShell>;
