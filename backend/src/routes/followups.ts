@@ -8,6 +8,7 @@ import type { AuthenticatedEmployee } from "../services/auth.service";
 import {
   createFollowUp,
   getRelatedName,
+  rollOverOverdueFollowUps,
   toFollowUpResponse,
   type FollowUpRecord,
 } from "../services/followup.service";
@@ -34,6 +35,8 @@ followups.use("*", requireAuth);
 followups.get("/", async (c) => {
   const db = c.env.saravana_traders_db;
   const employee = c.get("employee");
+
+  await rollOverOverdueFollowUps(db);
 
   const scope = await getEmployeeScope(db, employee.id);
 
@@ -91,6 +94,8 @@ followups.get("/:id", async (c) => {
   const db = c.env.saravana_traders_db;
   const employee = c.get("employee");
   const id = c.req.param("id");
+
+  await rollOverOverdueFollowUps(db);
 
   const row = await db
     .prepare(`
