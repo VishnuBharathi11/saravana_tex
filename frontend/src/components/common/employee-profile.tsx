@@ -200,7 +200,7 @@ export function EmployeeProfile({
                           type="button"
                           variant="outline"
                           className="shrink-0 rounded-xl bg-white/50"
-                          disabled={isSaving || !password}
+                          disabled={isSaving || password.length < 8}
                           onClick={async () => {
                             await onPasswordSave(password);
                             setPassword("");

@@ -239,6 +239,16 @@ employees.patch("/:id", async (c) => {
 
   const data = parsed.data;
 
+  if (data.password !== undefined && current.role !== "Admin") {
+    return c.json(
+      {
+        success: false,
+        message: "Only administrators can change passwords",
+      },
+      403,
+    );
+  }
+
   if (
     data.email &&
     data.email.toLowerCase() !==
