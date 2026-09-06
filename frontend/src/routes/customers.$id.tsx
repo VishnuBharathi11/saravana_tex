@@ -21,22 +21,88 @@ import { toast } from "sonner";
 import type { Customer, Order } from "@/types";
 import { canEditRecord, canDeleteRecord } from "@/lib/permissions";
 import { FollowUpFormDialogApi } from "@/components/common/followup-form-dialog-api";
-export const Route = createFileRoute("/customers/$id")({ head: () => ({ meta: [{ title: "Customer account · Saravana Traders CRM" }] }), component: CustomerDetail });
-const STATUSES: Customer["status"][] = ["Active", "Dormant", "VIP"]; const UNITS = ["Tons", "Nos", "Bags", "Sheets", "Rolls", "Boxes"]; const inr = (v: number) => `₹${v.toLocaleString("en-IN")}`;
-function Field({ label, value }: { label: string; value: string | number }) { return <div className="rounded-xl bg-white/55 px-3 py-2.5"><p className="text-[11px] tracking-wide text-muted-foreground uppercase">{label}</p><p className="mt-0.5 text-sm font-medium break-words">{value === "" ? "—" : value}</p></div>; }
+
+export const Route = createFileRoute("/customers/$id")({
+  head: () => ({ meta: [{ title: "Customer account · Saravana Traders CRM" }] }),
+  component: CustomerDetail,
+});
+
+const STATUSES: Customer["status"][] = ["Active", "Dormant", "VIP"];
+const UNITS = ["Tons", "Nos", "Bags", "Sheets", "Rolls", "Boxes"];
+const inr = (v: number) => `₹${v.toLocaleString("en-IN")}`;
+
+function Field({ label, value }: { label: string; value: string | number }) {
+  return <div className="rounded-xl bg-white/55 px-3 py-2.5"><p className="text-[11px] tracking-wide text-muted-foreground uppercase">{label}</p><p className="mt-0.5 text-sm font-medium break-words">{value === "" ? "—" : value}</p></div>;
+}
+
 function CustomerDetail() {
-  const user = useRequireAuth(); const { id } = useParams({ from: "/customers/$id" }); const navigate = useNavigate(); const queryClient = useQueryClient(); const [editing, setEditing] = useState(false); const [draft, setDraft] = useState<Customer | null>(null); const [confirmDelete, setConfirmDelete] = useState(false); const [openFollowUp, setOpenFollowUp] = useState(false);
-  const customerQuery = useQuery({ queryKey: ["customers", id], queryFn: () => getCustomer(id), enabled: Boolean(user && id) }); const ordersQuery = useQuery({ queryKey: ["orders"], queryFn: getOrders, enabled: Boolean(user) }); const employeesQuery = useQuery({ queryKey: ["employees"], queryFn: getEmployees, enabled: Boolean(user) });
-  const updateMutation = useMutation({ mutationFn: (input: UpdateCustomerInput) => updateCustomer(id, input), onSuccess: async (updated) => { queryClient.setQueryData(["customers", id], updated); await queryClient.invalidateQueries({ queryKey: ["customers"] }); setEditing(false); setDraft(null); toast.success("Customer updated"); }, onError: (e) => toast.error(e instanceof Error ? e.message : "Unable to update customer") });
-  const deleteMutation = useMutation({ mutationFn: () => deleteCustomer(id), onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ["customers"] }); queryClient.removeQueries({ queryKey: ["customers", id] }); setConfirmDelete(false); toast.success("Customer deleted"); navigate({ to: "/customers" }); }, onError: (e) => { setConfirmDelete(false); toast.error(e instanceof Error ? e.message : "Unable to delete customer"); } });
-  if (!user) return null; if (customerQuery.isPending) return <AppShell><div className="glass rounded-2xl p-8 text-center text-sm text-muted-foreground">Loading customer...</div></AppShell>; const customer = customerQuery.data;
+  const user = useRequireAuth();
+  const { id } = useParams({ from: "/customers/$id" });
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState<Customer | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [openFollowUp, setOpenFollowUp] = useState(false);
+
+  const customerQuery = useQuery({ queryKey: ["customers", id], queryFn: () => getCustomer(id), enabled: Boolean(user && id) });
+  const ordersQuery = useQuery({ queryKey: ["orders"], queryFn: getOrders, enabled: Boolean(user) });
+  const employeesQuery = useQuery({ queryKey: ["employees"], queryFn: getEmployees, enabled: Boolean(user) });
+
+  const updateMutation = useMutation({
+    mutationFn: (input: UpdateCustomerInput) => updateCustomer(id, input),
+    onSuccess: async (updated) => { queryClient.setQueryData(["customers", id], updated); await queryClient.invalidateQueries({ queryKey: ["customers"] }); setEditing(false); setDraft(null); toast.success("Customer updated"); },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Unable to update customer"),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: () => deleteCustomer(id),
+    onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ["customers"] }); queryClient.removeQueries({ queryKey: ["customers", id] }); setConfirmDelete(false); toast.success("Customer deleted"); navigate({ to: "/customers" }); },
+    onError: (e) => { setConfirmDelete(false); toast.error(e instanceof Error ? e.message : "Unable to delete customer"); },
+  });
+
+  if (!user) return null;
+  if (customerQuery.isPending) return <AppShell><div className="glass rounded-2xl p-8 text-center text-sm text-muted-foreground">Loading customer...</div></AppShell>;
+  const customer = customerQuery.data;
   if (customerQuery.isError || !customer) return <AppShell><div className="glass rounded-2xl p-8 text-center"><p className="font-medium">Customer not found</p><Link to="/customers" className="mt-3 inline-block text-sm text-primary">Back to customers</Link></div></AppShell>;
-  const employees = employeesQuery.data ?? []; const assignedEmployee = employees.find((e) => e.id === customer.employeeId); const custOrders = (ordersQuery.data ?? []).filter((o) => o.customerId === customer.id); const paid = custOrders.filter((o) => o.paymentStatus === "Paid").reduce((a, o) => a + o.value, 0); const due = custOrders.filter((o) => o.paymentStatus !== "Paid").reduce((a, o) => a + o.value, 0); const d = draft ?? customer; const upd = (patch: Partial<Customer>) => setDraft({ ...d, ...patch });
-  const save = () => { if (!d.name.trim() || !d.company.trim()) { toast.error("Name and company are required"); return; } updateMutation.mutate({ name: d.name, company: d.company, phone: d.phone, email: d.email, address: d.address, material: d.material, units: d.units, quantity: d.quantity, duration: d.duration, notes: d.notes, status: d.status, source: d.source, feedback: d.feedback }); };
-  return <AppShell><div className="space-y-4"><Button variant="ghost" className="gap-2 pl-0" onClick={() => navigate({ to: "/customers" })}><ArrowLeft className="size-4" /> Back</Button><IdentityHeader name={customer.name} company={customer.company} phone={customer.phone} email={customer.email} meta={`Customer since ${customer.createdAt} · ${customer.source}`} actions={editing ? <><Button className="gap-2 rounded-xl" onClick={save} disabled={updateMutation.isPending}><Save className="size-4" /> {updateMutation.isPending ? "Saving..." : "Save"}</Button><Button variant="ghost" className="gap-2 rounded-xl" onClick={() => { setEditing(false); setDraft(null); }}><X className="size-4" /> Cancel</Button></> : <><Button variant="outline" className="glass-soft gap-2 rounded-xl border-0" onClick={() => { setDraft(customer); setEditing(true); }}><PencilLine className="size-4" /> Edit</Button><Button className="gap-2 rounded-xl" onClick={() => navigate({ to: "/orders/new" })}><Plus className="size-4" /> Create Order</Button><Button variant="outline" className="glass-soft gap-2 rounded-xl border-0" onClick={() => setOpenFollowUp(true)}><CalendarPlus className="size-4" /> Follow-up</Button>{canDeleteRecord(user, customer) && <Button variant="ghost" className="gap-2 rounded-xl text-destructive" onClick={() => setConfirmDelete(true)} disabled={deleteMutation.isPending}><Trash2 className="size-4" /></Button>}</>} />
-  <div className="grid gap-3 lg:grid-cols-3"><div className="glass rounded-2xl p-4 lg:col-span-2"><p className="text-sm font-semibold">Basic information</p>{editing ? <div className="mt-3 grid gap-3 sm:grid-cols-2">{([["name","Name"],["company","Company"],["phone","Phone"],["email","Email"],["material","Preferred material"],["source","Source"]] as const).map(([key,label]) => <div key={key}><Label>{label}</Label><Input value={d[key]} onChange={(e) => upd({ [key]: e.target.value } as Partial<Customer>)} className="h-10 border-0 bg-white/70" /></div>)}<div><Label>Typical quantity</Label><Input type="number" min={0} value={d.quantity} onChange={(e) => upd({ quantity: Number(e.target.value) })} className="h-10 border-0 bg-white/70" /></div><div><Label>Units</Label><Select value={d.units} onValueChange={(v) => upd({ units: v })}><SelectTrigger className="h-10 w-full border-0 bg-white/70"><SelectValue /></SelectTrigger><SelectContent>{UNITS.map((u) => <SelectItem key={u} value={u}>{u}</SelectItem>)}</SelectContent></Select></div><div><Label>Status</Label><Select value={d.status} onValueChange={(v) => upd({ status: v as Customer["status"] })}><SelectTrigger className="h-10 w-full border-0 bg-white/70"><SelectValue /></SelectTrigger><SelectContent>{STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div><div><Label>Assigned employee</Label><Input value={assignedEmployee?.name ?? "Unassigned"} readOnly className="h-10 border-0 bg-white/70" /></div><div className="sm:col-span-2"><Label>Address</Label><Input value={d.address} onChange={(e) => upd({ address: e.target.value })} className="h-10 border-0 bg-white/70" /></div><div className="sm:col-span-2"><Label>Feedback</Label><Textarea rows={3} value={d.feedback} onChange={(e) => upd({ feedback: e.target.value })} className="border-0 bg-white/70" /></div><div className="sm:col-span-2"><Label>Notes</Label><Textarea rows={4} value={d.notes} onChange={(e) => upd({ notes: e.target.value })} className="border-0 bg-white/70" /></div></div> : <div className="mt-3 grid gap-2 sm:grid-cols-2"><CopyField kind="phone" label="Phone" value={customer.phone} /><CopyField kind="email" label="Email" value={customer.email} /><Field label="Company" value={customer.company} /><Field label="Source" value={customer.source} /><Field label="Preferred material" value={customer.material} /><Field label="Typical quantity" value={`${customer.quantity} ${customer.units}`} /><Field label="Assigned employee" value={assignedEmployee?.name ?? "Unassigned"} /><Field label="Duration" value={customer.duration} /><div className="sm:col-span-2"><Field label="Address" value={customer.address} /></div></div>}</div><div className="space-y-3"><div className="glass rounded-2xl p-4"><p className="text-sm font-semibold">Payment summary</p><div className="mt-3 space-y-2"><Field label="Lifetime value" value={inr(customer.totalValue)} /><Field label="Collected" value={inr(paid)} /><Field label="Outstanding" value={inr(due)} /><Field label="Orders placed" value={customer.totalOrders} /></div></div><div className="glass rounded-2xl p-4"><p className="text-sm font-semibold">Feedback</p><p className="mt-2 rounded-xl bg-white/55 px-3 py-2.5 text-sm">{customer.feedback || "No feedback captured yet."}</p></div><div className="glass rounded-2xl p-4"><p className="text-sm font-semibold">Notes</p><p className="mt-2 rounded-xl bg-white/55 px-3 py-2.5 text-sm whitespace-pre-wrap">{customer.notes || "No notes added."}</p></div></div></div>
-  <div><p className="mb-2 text-sm font-semibold">Order history</p><DataTable<Order> rows={custOrders} columns={[{ key: "invoiceNumber", header: "Invoice" },{ key: "material", header: "Material" },{ key: "quantity", header: "Qty", render: (o) => `${o.quantity} ${o.units}` },{ key: "value", header: "Value", render: (o) => inr(o.value) },{ key: "paymentStatus", header: "Payment", render: (o) => <StatusChip value={o.paymentStatus} /> },{ key: "status", header: "Status", render: (o) => <StatusChip value={o.status} /> },{ key: "createdAt", header: "Created" }]} rowKey={(o) => o.id} onRowClick={(o) => navigate({ to: "/orders/$id/edit", params: { id: o.id } })} pageSize={5} emptyMessage="No orders recorded for this customer yet." /></div></div>
-  <ConfirmDialog open={confirmDelete} onOpenChange={setConfirmDelete} title={`Delete ${customer.name}?`} description="The customer cannot be deleted while orders exist." confirmLabel={deleteMutation.isPending ? "Deleting..." : "Delete customer"} destructive onConfirm={() => deleteMutation.mutate()} />
-  <FollowUpFormDialogApi open={openFollowUp} onOpenChange={setOpenFollowUp} target={{ id: customer.id, name: customer.name, type: "Customer" }} />
-  </div></AppShell>;
+
+  const employees = employeesQuery.data ?? [];
+  const assignedEmployee = employees.find((e) => e.id === customer.employeeId);
+  const custOrders = (ordersQuery.data ?? []).filter((o) => o.customerId === customer.id);
+  const paid = custOrders.filter((o) => o.paymentStatus === "Paid").reduce((a, o) => a + o.value, 0);
+  const due = custOrders.filter((o) => o.paymentStatus !== "Paid").reduce((a, o) => a + o.value, 0);
+  const d = draft ?? customer;
+  const upd = (patch: Partial<Customer>) => setDraft({ ...d, ...patch });
+  const save = () => {
+    if (!d.name.trim() || !d.company.trim()) { toast.error("Name and company are required"); return; }
+    updateMutation.mutate({ name: d.name, company: d.company, phone: d.phone, email: d.email, address: d.address, material: d.material, units: d.units, quantity: d.quantity, duration: d.duration, notes: d.notes, status: d.status, source: d.source, feedback: d.feedback });
+  };
+
+  return (
+    <AppShell>
+      <div className="space-y-4">
+        <Button variant="ghost" className="gap-2 pl-0" onClick={() => navigate({ to: "/customers" })}><ArrowLeft className="size-4" /> Back</Button>
+        <IdentityHeader
+          name={customer.name}
+          company={customer.company}
+          phone={customer.phone}
+          email={customer.email}
+          meta={`Customer since ${customer.createdAt} · ${customer.source}`}
+          actions={editing ? <><Button className="gap-2 rounded-xl" onClick={save} disabled={updateMutation.isPending}><Save className="size-4" /> {updateMutation.isPending ? "Saving..." : "Save"}</Button><Button variant="ghost" className="gap-2 rounded-xl" onClick={() => { setEditing(false); setDraft(null); }}><X className="size-4" /> Cancel</Button></> : <><Button variant="outline" className="glass-soft gap-2 rounded-xl border-0" onClick={() => { setDraft(customer); setEditing(true); }}><PencilLine className="size-4" /> Edit</Button><Button className="gap-2 rounded-xl" onClick={() => navigate({ to: "/orders/new" })}><Plus className="size-4" /> Create Order</Button><Button variant="outline" className="glass-soft gap-2 rounded-xl border-0" onClick={() => setOpenFollowUp(true)}><CalendarPlus className="size-4" /> Follow-up</Button>{canDeleteRecord(user, customer) && <Button variant="ghost" className="gap-2 rounded-xl text-destructive" onClick={() => setConfirmDelete(true)} disabled={deleteMutation.isPending}><Trash2 className="size-4" /></Button>}</>}
+        />
+
+        <div className="grid gap-3 lg:grid-cols-3">
+          <div className="glass rounded-2xl p-4 lg:col-span-2">
+            <p className="text-sm font-semibold">Basic information</p>
+            {editing ? <div className="mt-3 grid gap-3 sm:grid-cols-2">{([["name","Name"],["company","Company"],["phone","Phone"],["email","Email"],["material","Preferred material"],["source","Source"]] as const).map(([key,label]) => <div key={key}><Label>{label}</Label><Input value={d[key]} onChange={(e) => upd({ [key]: e.target.value } as Partial<Customer>)} className="h-10 border-0 bg-white/70" /></div>)}<div><Label>Typical quantity</Label><Input type="number" min={0} value={d.quantity} onChange={(e) => upd({ quantity: Number(e.target.value) })} className="h-10 border-0 bg-white/70" /></div><div><Label>Units</Label><Select value={d.units} onValueChange={(v) => upd({ units: v })}><SelectTrigger className="h-10 w-full border-0 bg-white/70"><SelectValue /></SelectTrigger><SelectContent>{UNITS.map((u) => <SelectItem key={u} value={u}>{u}</SelectItem>)}</SelectContent></Select></div><div><Label>Status</Label><Select value={d.status} onValueChange={(v) => upd({ status: v as Customer["status"] })}><SelectTrigger className="h-10 w-full border-0 bg-white/70"><SelectValue /></SelectTrigger><SelectContent>{STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div><div><Label>Assigned employee</Label><Input value={assignedEmployee?.name ?? "Unassigned"} readOnly className="h-10 border-0 bg-white/70" /></div><div className="sm:col-span-2"><Label>Address</Label><Input value={d.address} onChange={(e) => upd({ address: e.target.value })} className="h-10 border-0 bg-white/70" /></div><div className="sm:col-span-2"><Label>Feedback</Label><Textarea rows={3} value={d.feedback} onChange={(e) => upd({ feedback: e.target.value })} className="border-0 bg-white/70" /></div><div className="sm:col-span-2"><Label>Notes</Label><Textarea rows={4} value={d.notes} onChange={(e) => upd({ notes: e.target.value })} className="border-0 bg-white/70" /></div></div> : <div className="mt-3 grid gap-2 sm:grid-cols-2"><CopyField kind="phone" label="Phone" value={customer.phone} /><CopyField kind="email" label="Email" value={customer.email} /><Field label="Company" value={customer.company} /><Field label="Source" value={customer.source} /><Field label="Preferred material" value={customer.material} /><Field label="Typical quantity" value={`${customer.quantity} ${customer.units}`} /><Field label="Assigned employee" value={assignedEmployee?.name ?? "Unassigned"} /><Field label="Duration" value={customer.duration} /><div className="sm:col-span-2"><Field label="Address" value={customer.address} /></div></div>}
+          </div>
+          <div className="space-y-3"><div className="glass rounded-2xl p-4"><p className="text-sm font-semibold">Payment summary</p><div className="mt-3 space-y-2"><Field label="Lifetime value" value={inr(customer.totalValue)} /><Field label="Collected" value={inr(paid)} /><Field label="Outstanding" value={inr(due)} /><Field label="Orders placed" value={customer.totalOrders} /></div></div><div className="glass rounded-2xl p-4"><p className="text-sm font-semibold">Feedback</p><p className="mt-2 rounded-xl bg-white/55 px-3 py-2.5 text-sm">{customer.feedback || "No feedback captured yet."}</p></div><div className="glass rounded-2xl p-4"><p className="text-sm font-semibold">Notes</p><p className="mt-2 rounded-xl bg-white/55 px-3 py-2.5 text-sm whitespace-pre-wrap">{customer.notes || "No notes added."}</p></div></div>
+        </div>
+
+        <div><p className="mb-2 text-sm font-semibold">Order history</p><DataTable<Order> rows={custOrders} columns={[{ key: "invoiceNumber", header: "Invoice", render: (o) => o.invoiceNumber || o.id },{ key: "material", header: "Material", render: (o) => o.items?.map((i) => i.material).join(", ") || o.material },{ key: "quantity", header: "Qty", render: (o) => o.items?.reduce((sum, i) => sum + i.quantity, 0) ?? o.quantity },{ key: "value", header: "Value", render: (o) => inr(o.value) },{ key: "paymentStatus", header: "Payment", render: (o) => <StatusChip value={o.paymentStatus} /> },{ key: "status", header: "Status", render: (o) => <StatusChip value={o.status} /> },{ key: "createdAt", header: "Created" }]} rowKey={(o) => o.id} onRowClick={(o) => navigate({ to: "/orders/$id", params: { id: o.id } })} pageSize={5} emptyMessage="No orders recorded for this customer yet." /></div>
+        <ConfirmDialog open={confirmDelete} onOpenChange={setConfirmDelete} title={`Delete ${customer.name}?`} description="The customer cannot be deleted while orders exist." confirmLabel={deleteMutation.isPending ? "Deleting..." : "Delete customer"} destructive onConfirm={() => deleteMutation.mutate()} />
+        <FollowUpFormDialogApi open={openFollowUp} onOpenChange={setOpenFollowUp} target={{ id: customer.id, name: customer.name, type: "Customer" }} />
+      </div>
+    </AppShell>
+  );
 }
