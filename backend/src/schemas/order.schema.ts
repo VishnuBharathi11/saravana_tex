@@ -9,7 +9,7 @@ export const orderItemSchema = z.object({
 });
 
 const orderFields = {
-  invoiceNumber: z.string().trim().min(1).max(100),
+  invoiceNumber: z.string().trim().min(1).max(100).optional(),
   customerId: z.string().trim().min(1),
   items: z.array(orderItemSchema).min(1).optional(),
   material: z.string().trim().min(1).max(100).optional(),
@@ -32,7 +32,7 @@ export const createOrderSchema = z.object(orderFields).superRefine((value, ctx) 
 });
 
 export const updateOrderSchema = z.object({
-  invoiceNumber: orderFields.invoiceNumber.optional(),
+  invoiceNumber: z.string().trim().min(1).max(100).optional(),
   customerId: orderFields.customerId.optional(),
   items: orderFields.items,
   material: orderFields.material,
