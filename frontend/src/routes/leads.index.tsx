@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { Plus, Search } from "lucide-react";
@@ -83,7 +83,6 @@ function LeadsPage() {
       render: (r) => employeeName(r.employeeId),
     },
     { key: "status", header: "Status", render: (r) => <StatusChip value={r.status} /> },
-    { key: "source", header: "Source" },
     { key: "createdAt", header: "Created" },
   ];
 
