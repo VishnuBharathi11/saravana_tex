@@ -6,9 +6,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/lib/auth";
-import { getEmployees } from "@/api/employees";
-import { useQuery } from "@tanstack/react-query";
-
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/")({
@@ -33,17 +30,6 @@ export const Route = createFileRoute("/")({
 function LoginPage() {
   const { login, user, ready } = useAuth();
   const navigate = useNavigate();
-  const employeesQuery = useQuery({ queryKey: ["employees"], queryFn: getEmployees });
-  const demoAccounts = (employeesQuery.data ?? [])
-    .filter((employee) => employee.role === "Admin" || (employee.role === "Employee" && employee.status === "Active"))
-    .slice(0, 2)
-    .map((employee) => ({
-      id: employee.id,
-      name: employee.name,
-      email: employee.email,
-      role: employee.role,
-      initials: employee.name.split(" ").map((part) => part[0]).join("").slice(0, 2),
-    }));
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -166,56 +152,6 @@ function LoginPage() {
               {!ready ? "Checking session..." : submitting ? "Signing in..." : "Sign in"}
               <ArrowRight className="size-4" />
             </Button>
-          </div>
-
-          <div className="mt-6">
-            <div className="flex items-center gap-3">
-              <span className="h-px flex-1 bg-border" />
-              <span className="text-[11px] tracking-wide text-muted-foreground uppercase">
-                Or sign in as
-              </span>
-              <span className="h-px flex-1 bg-border" />
-            </div>
-
-            <div className="mt-3 space-y-2">
-              {demoAccounts.map((d) => (
-                <button
-                  key={d.id}
-                  type="button"
-                  onClick={async () => {
-                    const demoPassword = d.role === "Admin" ? "Admin@12345!" : "Employee@12345!";
-                    setEmail(d.email);
-                    setPassword(demoPassword);
-                    setSubmitting(true);
-
-                    try {
-                      await login(d.email, demoPassword);
-                      toast.success(`Signed in as ${d.name} · ${d.role}`);
-                      navigate({ to: "/dashboard" });
-                    } catch (error) {
-                      toast.error(error instanceof Error ? error.message : "Unable to sign in");
-                    } finally {
-                      setSubmitting(false);
-                    }
-                  }}
-                  disabled={!ready || submitting}
-                  className="glass-soft lift flex w-full min-w-0 items-center gap-2 rounded-xl px-3 py-2.5 text-left"
-                >
-                  <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-mint to-sky/60 text-[11px] font-bold">
-                    {d.initials}
-                  </span>
-                  <span className="min-w-0 flex-1 overflow-hidden">
-                    <span className="block truncate text-sm font-medium">{d.name}</span>
-                    <span className="block truncate text-[11px] text-muted-foreground">
-                      {d.email}
-                    </span>
-                  </span>
-                  <span className="shrink-0 max-w-[90px] truncate rounded-full bg-white/70 px-2 py-0.5 text-[10px] font-medium text-primary text-center">
-                    {d.role}
-                  </span>
-                </button>
-              ))}
-            </div>
           </div>
         </form>
       </div>
