@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CalendarRouteImport } from './routes/calendar'
 import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as FollowUpsRouteImport } from './routes/follow-ups'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as CustomersIndexRouteImport } from './routes/customers.index'
@@ -42,6 +43,11 @@ const CalendarRoute = CalendarRouteImport.update({
 const DashboardRoute = DashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FollowUpsRoute = FollowUpsRouteImport.update({
+  id: '/follow-ups',
+  path: '/follow-ups',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProfileRoute = ProfileRouteImport.update({
@@ -129,6 +135,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/calendar': typeof CalendarRoute
   '/dashboard': typeof DashboardRoute
+  '/follow-ups': typeof FollowUpsRoute
   '/profile': typeof ProfileRoute
   '/settings': typeof SettingsRoute
   '/customers/$id': typeof CustomersIdRoute
@@ -150,6 +157,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/calendar': typeof CalendarRoute
   '/dashboard': typeof DashboardRoute
+  '/follow-ups': typeof FollowUpsRoute
   '/profile': typeof ProfileRoute
   '/settings': typeof SettingsRoute
   '/customers/$id': typeof CustomersIdRoute
@@ -171,6 +179,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/calendar': typeof CalendarRoute
   '/dashboard': typeof DashboardRoute
+  '/follow-ups': typeof FollowUpsRoute
   '/profile': typeof ProfileRoute
   '/settings': typeof SettingsRoute
   '/customers/$id': typeof CustomersIdRoute
@@ -194,6 +203,7 @@ export interface FileRouteTypes {
     | '/'
     | '/calendar'
     | '/dashboard'
+    | '/follow-ups'
     | '/profile'
     | '/settings'
     | '/customers/$id'
@@ -215,6 +225,7 @@ export interface FileRouteTypes {
     | '/'
     | '/calendar'
     | '/dashboard'
+    | '/follow-ups'
     | '/profile'
     | '/settings'
     | '/customers/$id'
@@ -235,6 +246,7 @@ export interface FileRouteTypes {
     | '/'
     | '/calendar'
     | '/dashboard'
+    | '/follow-ups'
     | '/profile'
     | '/settings'
     | '/customers/$id'
@@ -257,6 +269,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CalendarRoute: typeof CalendarRoute
   DashboardRoute: typeof DashboardRoute
+  FollowUpsRoute: typeof FollowUpsRoute
   ProfileRoute: typeof ProfileRoute
   SettingsRoute: typeof SettingsRoute
   CustomersIdRoute: typeof CustomersIdRoute
@@ -294,6 +307,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/follow-ups': {
+      id: '/follow-ups'
+      path: '/follow-ups'
+      fullPath: '/follow-ups'
+      preLoaderRoute: typeof FollowUpsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/profile': {
@@ -429,6 +449,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CalendarRoute: CalendarRoute,
   DashboardRoute: DashboardRoute,
+  FollowUpsRoute: FollowUpsRoute,
   ProfileRoute: ProfileRoute,
   SettingsRoute: SettingsRoute,
   CustomersIdRoute: CustomersIdRoute,
