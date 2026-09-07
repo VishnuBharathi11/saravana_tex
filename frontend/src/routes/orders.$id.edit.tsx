@@ -34,7 +34,7 @@ function OrderEdit() {
   useEffect(() => {
     if (!orderQuery.data) return;
     const order = orderQuery.data;
-    setDraft({ invoiceNumber: order.invoiceNumber, customerId: order.customerId, status: order.status, employeeId: order.employeeId, deliveryDate: order.deliveryDate, address: order.address, notes: order.notes });
+    setDraft({ orderId: order.id, invoiceNumber: order.invoiceNumber, customerId: order.customerId, status: order.status, employeeId: order.employeeId, deliveryDate: order.deliveryDate, address: order.address, notes: order.notes });
     setItems(order.items?.length ? order.items.map(({ id: _id, value: _value, ...item }) => ({ ...item, deliveryDate: item.deliveryDate ?? order.deliveryDate })) : [{ material: order.material, materialType: order.materialType, quantity: order.quantity, units: order.units, price: order.price, deliveryDate: order.deliveryDate }]);
   }, [orderQuery.data]);
 
@@ -60,14 +60,21 @@ function OrderEdit() {
   const updateItem = (index: number, patch: Partial<CreateOrderItemInput>) => setItems((current) => current.map((item, currentIndex) => currentIndex === index ? { ...item, ...patch } : item));
   const removeItem = (index: number) => setItems((current) => current.filter((_, currentIndex) => currentIndex !== index));
   const total = items.reduce((sum, item) => sum + item.quantity * item.price, 0);
-  const save = () => {
+  const save = (): void => {
     const firstItem = items[0];
-    if (!firstItem) return toast.error("At least one item is required");
-    if (items.some((item) => !item.material.trim() || !item.units || !item.deliveryDate?.trim() || item.quantity <= 0 || item.price < 0) || !draft.deliveryDate?.trim() || !draft.address?.trim()) return toast.error("Complete all required order fields");
+    if (!firstItem) {
+      toast.error("At least one item is required");
+      return;
+    }
+    const invalid = items.some((item) => !item.material.trim() || !item.units || !item.deliveryDate?.trim() || item.quantity <= 0 || item.price < 0);
+    if (invalid || !draft.deliveryDate?.trim() || !draft.address?.trim() || !draft.status) {
+      toast.error("Complete all required order fields");
+      return;
+    }
     mutation.mutate({ ...draft, items, material: firstItem.material, materialType: firstItem.materialType, quantity: firstItem.quantity, units: firstItem.units, price: firstItem.price });
   };
 
-  return <AppShell><div className="space-y-4"><Button variant="ghost" className="gap-2 pl-0" onClick={() => navigate({ to: "/orders/$id", params: { id } })}><ArrowLeft className="size-4" /> Back to Order</Button><PageHeader title={`Edit Order ${order.invoiceNumber}`} subtitle={order.customerName} />
+  return <AppShell><div className="space-y-4"><Button variant="ghost" className="gap-2 pl-0" onClick={() => navigate({ to: "/orders/$id", params: { id } })}><ArrowLeft className="size-4" /> Back to Order</Button><PageHeader title={`Edit Order ${order.id}`} subtitle={order.customerName} />
     <div className="glass rounded-2xl p-4"><div className="grid gap-3 sm:grid-cols-2"><div><Label>Order ID</Label><Input value={order.id} readOnly className="h-10 border-0 bg-white/70" /></div><div><Label>Final delivery date</Label><Input type="date" value={draft.deliveryDate ?? ""} onChange={(e) => updateDraft({ deliveryDate: e.target.value })} className="h-10 border-0 bg-white/70" /></div><div className="sm:col-span-2"><Label>Delivery address</Label><Input value={draft.address ?? ""} onChange={(e) => updateDraft({ address: e.target.value })} className="h-10 border-0 bg-white/70" /></div>{user.role === "Admin" && <div><Label>Assigned employee</Label><Select value={draft.employeeId ?? ""} onValueChange={(v) => updateDraft({ employeeId: v })}><SelectTrigger className="h-10 w-full border-0 bg-white/70"><SelectValue /></SelectTrigger><SelectContent>{employeesQuery.data?.filter((employee) => employee.status === "Active").map((employee) => <SelectItem key={employee.id} value={employee.id}>{employee.name}</SelectItem>)}</SelectContent></Select></div>}<div><Label>Status</Label><Select value={draft.status ?? "Pending"} onValueChange={(v) => updateDraft({ status: v as OrderStatus })}><SelectTrigger className="h-10 w-full border-0 bg-white/70"><SelectValue /></SelectTrigger><SelectContent>{ORDER_STATUSES.map((status) => <SelectItem key={status} value={status}>{status}</SelectItem>)}</SelectContent></Select></div></div>
       <div className="mt-5 flex items-center justify-between"><p className="text-sm font-semibold">Items</p><Button type="button" variant="outline" className="gap-1.5 rounded-xl" onClick={() => setItems((current) => [...current, blank()])}><Plus className="size-4" /> Add item</Button></div>
       <div className="mt-3 space-y-3">{items.map((item, index) => <div key={index} className="rounded-2xl border border-border/70 bg-white/45 p-3"><div className="mb-2 flex items-center justify-between"><p className="text-xs font-semibold text-muted-foreground">Item {index + 1}</p>{items.length > 1 && <Button type="button" variant="ghost" size="icon" className="text-destructive" onClick={() => removeItem(index)}><Trash2 className="size-4" /></Button>}</div><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"><div><Label>Item</Label><Input value={item.material} onChange={(e) => updateItem(index, { material: e.target.value })} className="h-10 border-0 bg-white/70" /></div><div><Label>Quantity</Label><Input type="number" min={1} value={item.quantity} onChange={(e) => updateItem(index, { quantity: Number(e.target.value) })} className="h-10 border-0 bg-white/70" /></div><div><Label>Units</Label><Select value={item.units} onValueChange={(v) => updateItem(index, { units: v })}><SelectTrigger className="h-10 w-full border-0 bg-white/70"><SelectValue /></SelectTrigger><SelectContent>{TEXTILE_UNITS.map((unit) => <SelectItem key={unit} value={unit}>{unit}</SelectItem>)}</SelectContent></Select></div><div><Label>Unit price (₹)</Label><Input type="number" min={0} value={item.price} onChange={(e) => updateItem(index, { price: Number(e.target.value) })} className="h-10 border-0 bg-white/70" /></div><div className="sm:col-span-2 lg:col-span-4"><Label>Delivery date</Label><Input type="date" value={item.deliveryDate ?? ""} onChange={(e) => updateItem(index, { deliveryDate: e.target.value })} className="h-10 border-0 bg-white/70" /></div></div></div>)}</div>
