@@ -51,12 +51,14 @@ export async function createOrder(db: D1Database, employee: AuthenticatedEmploye
     assignedEmployeeId = assigned.id;
   }
   const items = normalizeItems(input); const first = items[0]; if (!first) throw new Error("At least one order item is required");
-  const id = `ORD-${crypto.randomUUID()}`; const invoiceNumber = input.invoiceNumber?.trim() || id; const createdAt = new Date().toISOString();
+  const id = input.orderId.trim(); const invoiceNumber = input.invoiceNumber?.trim() || id; const createdAt = new Date().toISOString();
+  const existing = await db.prepare(`SELECT id FROM orders WHERE id = ? LIMIT 1`).bind(id).first<{ id: string }>();
+  if (existing) throw new Error("Order ID already exists");
   await db.batch([
     db.prepare(`INSERT INTO orders (id, invoice_number, customer_id, material, material_type, quantity, units, price, payment_status, status, employee_id, created_at, delivery_date, address, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).bind(id, invoiceNumber, input.customerId, first.material, first.materialType, first.quantity, first.units, first.price, input.paymentStatus, input.status, assignedEmployeeId, createdAt, input.deliveryDate, input.address, input.notes),
     ...items.map((item, index) => db.prepare(`INSERT INTO order_items (id, order_id, material, material_type, quantity, units, price) VALUES (?, ?, ?, ?, ?, ?, ?)`).bind(`OI-${crypto.randomUUID()}-${index}`, id, item.material, item.materialType, item.quantity, item.units, item.price)),
   ]);
-  await createNotification(db, { type: "ORDER", title: "New order created", description: `Order ${invoiceNumber} was created for ${customer.name}.`, targetId: id });
+  await createNotification(db, { type: "ORDER", title: "New order created", description: `Order ${id} was created for ${customer.name}.`, targetId: id });
   const order = await getOrderWithCustomer(db, id); if (!order) throw new Error("Order was created but could not be retrieved"); return order;
 }
 
