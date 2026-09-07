@@ -9,6 +9,7 @@ export const orderItemSchema = z.object({
 });
 
 const orderFields = {
+  orderId: z.string().trim().min(1).max(100),
   invoiceNumber: z.string().trim().min(1).max(100).optional(),
   customerId: z.string().trim().min(1),
   items: z.array(orderItemSchema).min(1).optional(),
