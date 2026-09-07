@@ -7,6 +7,9 @@ export interface OrderRecord { id: string; invoice_number: string; customer_id: 
 export interface OrderItemRecord { id: string; order_id: string; material: string; material_type: string; quantity: number; units: string; price: number; delivery_date: string; }
 interface CustomerInfo { id: string; name: string; company: string; address: string; employee_id: string; }
 
+const dbOrderStatus = (status: string) => (status === "Cancel" ? "Cancelled" : status);
+const apiOrderStatus = (status: string) => (status === "Cancelled" ? "Cancel" : status);
+
 export function normalizeItems(input: CreateOrderInput): OrderItemInput[] {
   if (input.items?.length) return input.items;
   return [{ material: input.material!, materialType: input.materialType!, quantity: input.quantity!, units: input.units!, price: input.price!, deliveryDate: input.deliveryDate }];
@@ -30,7 +33,7 @@ function toOrderResponse(row: OrderRecord, customer: CustomerInfo, items: Array<
     material: normalizedItems[0].material, materialType: normalizedItems[0].materialType,
     quantity: normalizedItems.reduce((sum, item) => sum + item.quantity, 0), units: normalizedItems[0].units, price: normalizedItems[0].price,
     value: normalizedItems.reduce((sum, item) => sum + item.value, 0), items: normalizedItems,
-    paymentStatus: row.payment_status, status: row.status, employeeId: row.employee_id, createdAt: row.created_at, deliveryDate: row.delivery_date, address: row.address, notes: row.notes,
+    paymentStatus: row.payment_status, status: apiOrderStatus(row.status), employeeId: row.employee_id, createdAt: row.created_at, deliveryDate: row.delivery_date, address: row.address, notes: row.notes,
   };
 }
 
@@ -51,11 +54,11 @@ export async function createOrder(db: D1Database, employee: AuthenticatedEmploye
     assignedEmployeeId = assigned.id;
   }
   const items = normalizeItems(input); const first = items[0]; if (!first) throw new Error("At least one order item is required");
-  const id = input.orderId.trim(); const invoiceNumber = input.invoiceNumber?.trim() || id; const createdAt = new Date().toISOString();
+  const id = input.orderId.trim(); const invoiceNumber = input.invoiceNumber?.trim() || id; const createdAt = new Date().toISOString(); const status = dbOrderStatus(input.status);
   const existing = await db.prepare(`SELECT id FROM orders WHERE id = ? LIMIT 1`).bind(id).first<{ id: string }>();
   if (existing) throw new Error("Order ID already exists");
   await db.batch([
-    db.prepare(`INSERT INTO orders (id, invoice_number, customer_id, material, material_type, quantity, units, price, payment_status, status, employee_id, created_at, delivery_date, address, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).bind(id, invoiceNumber, input.customerId, first.material, first.materialType, first.quantity, first.units, first.price, input.paymentStatus, input.status, assignedEmployeeId, createdAt, input.deliveryDate, input.address, input.notes),
+    db.prepare(`INSERT INTO orders (id, invoice_number, customer_id, material, material_type, quantity, units, price, payment_status, status, employee_id, created_at, delivery_date, address, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).bind(id, invoiceNumber, input.customerId, first.material, first.materialType, first.quantity, first.units, first.price, input.paymentStatus, status, assignedEmployeeId, createdAt, input.deliveryDate, input.address, input.notes),
     ...items.map((item, index) => db.prepare(`INSERT INTO order_items (id, order_id, material, material_type, quantity, units, price, delivery_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`).bind(`OI-${crypto.randomUUID()}-${index}`, id, item.material, item.materialType, item.quantity, item.units, item.price, item.deliveryDate)),
   ]);
   await createNotification(db, { type: "ORDER", title: "New order created", description: `Order ${id} was created for ${customer.name}.`, targetId: id });
