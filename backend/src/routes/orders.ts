@@ -32,7 +32,7 @@ orders.post('/', async (c) => {
   const parsed = createOrderSchema.safeParse(body);
   if (!parsed.success) return c.json({ success: false, message: 'Validation failed', errors: parsed.error.flatten().fieldErrors }, 400);
   try { return c.json({ success: true, data: await createOrder(c.env.saravana_traders_db, employee, parsed.data) }, 201); }
-  catch (error) { const message = error instanceof Error ? error.message : 'Failed to create order'; if (message === 'Customer not found' || message === 'Assigned employee not found or inactive' || message === 'Access denied to customer') return c.json({ success: false, message }, 400); console.error('Create order failed:', error); return c.json({ success: false, message: 'Failed to create order' }, 500); }
+  catch (error) { const message = error instanceof Error ? error.message : 'Failed to create order'; if (message === 'Customer not found' || message === 'Assigned employee not found or inactive' || message === 'Access denied to customer' || message === 'Order ID already exists') return c.json({ success: false, message }, 400); console.error('Create order failed:', error); return c.json({ success: false, message: 'Failed to create order' }, 500); }
 });
 
 orders.patch('/:id', async (c) => {
