@@ -8,7 +8,7 @@ export const orderItemSchema = z.object({
   price: z.number().nonnegative(),
 });
 
-export const ORDER_STATUS_VALUES = ["Pending", "Confirmed", "Cancelled"] as const;
+export const ORDER_STATUS_VALUES = ["Pending", "Confirmed", "Cancel"] as const;
 
 const orderFields = {
   orderId: z.string().trim().min(1).max(100),
@@ -30,20 +30,8 @@ const orderFields = {
 
 export const createOrderSchema = z.object(orderFields).superRefine((value, ctx) => {
   const hasItems = Boolean(value.items?.length);
-  const hasLegacyItem = Boolean(
-    value.material &&
-      value.materialType &&
-      value.units &&
-      value.quantity !== undefined &&
-      value.price !== undefined,
-  );
-  if (!hasItems && !hasLegacyItem) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "At least one order item is required",
-      path: ["items"],
-    });
-  }
+  const hasLegacyItem = Boolean(value.material && value.materialType && value.units && value.quantity !== undefined && value.price !== undefined);
+  if (!hasItems && !hasLegacyItem) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "At least one order item is required", path: ["items"] });
 });
 
 export const updateOrderSchema = z.object({
