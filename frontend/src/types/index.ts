@@ -1,6 +1,6 @@
 export type Role = "Admin" | "Employee";
 export type LeadStatus = "New" | "Contacted" | "Interested" | "Negotiation" | "Converted" | "Lost";
-export type OrderStatus = "Draft" | "Confirmed" | "Processing" | "Packed" | "Dispatched" | "Delivered" | "Cancelled";
+export type OrderStatus = "Draft" | "Confirmed" | "Pending" | "Cancel" | "Processing" | "Packed" | "Dispatched" | "Delivered" | "Cancelled";
 export type PaymentStatus = "Pending" | "Partial" | "Paid";
 export type FollowUpStatus = "Pending" | "Completed" | "Important" | "Meeting" | "Order" | "Reminder" | "Missed";
 export type Priority = "Low" | "Medium" | "High";
