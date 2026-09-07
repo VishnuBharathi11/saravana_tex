@@ -52,7 +52,7 @@ orders.patch('/:id', async (c) => {
   try {
     await db.prepare(`UPDATE orders SET invoice_number = ?, customer_id = ?, material = ?, material_type = ?, quantity = ?, units = ?, price = ?, payment_status = ?, status = ?, employee_id = ?, delivery_date = ?, address = ?, notes = ? WHERE id = ?`).bind(updated.invoiceNumber, customerId, updated.material, updated.materialType, updated.quantity, updated.units, updated.price, updated.paymentStatus, updated.status, employeeId, updated.deliveryDate, updated.address, updated.notes, id).run();
     if (items) await replaceOrderItems(db, id, items);
-    else if (data.material || data.materialType || data.quantity !== undefined || data.units || data.price !== undefined) await replaceOrderItems(db, id, [{ material: updated.material, materialType: updated.materialType, quantity: updated.quantity, units: updated.units, price: updated.price }]);
+    else if (data.material || data.materialType || data.quantity !== undefined || data.units || data.price !== undefined) await replaceOrderItems(db, id, [{ material: updated.material, materialType: updated.materialType, quantity: updated.quantity, units: updated.units, price: updated.price, deliveryDate: updated.deliveryDate }]);
   } catch (error) { console.error('Update order failed:', error); return c.json({ success: false, message: 'Failed to update order' }, 500); }
   const order = await getOrderWithCustomer(db, id); if (!order) return c.json({ success: false, message: 'Order update completed but order could not be retrieved' }, 500); return c.json({ success: true, data: order });
 });
