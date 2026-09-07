@@ -6,6 +6,7 @@ export const orderItemSchema = z.object({
   quantity: z.number().int().positive(),
   units: z.string().trim().min(1).max(50),
   price: z.number().nonnegative(),
+  deliveryDate: z.string().trim().min(1),
 });
 
 export const ORDER_STATUS_VALUES = ["Pending", "Confirmed", "Cancel"] as const;
