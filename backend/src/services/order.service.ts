@@ -4,27 +4,27 @@ import { canAccessRecord } from "../middleware/authorization";
 import { createNotification } from "./notification.service";
 
 export interface OrderRecord { id: string; invoice_number: string; customer_id: string; material: string; material_type: string; quantity: number; units: string; price: number; payment_status: string; status: string; employee_id: string; created_at: string; delivery_date: string; address: string; notes: string; }
-export interface OrderItemRecord { id: string; order_id: string; material: string; material_type: string; quantity: number; units: string; price: number; }
+export interface OrderItemRecord { id: string; order_id: string; material: string; material_type: string; quantity: number; units: string; price: number; delivery_date: string; }
 interface CustomerInfo { id: string; name: string; company: string; address: string; employee_id: string; }
 
 export function normalizeItems(input: CreateOrderInput): OrderItemInput[] {
   if (input.items?.length) return input.items;
-  return [{ material: input.material!, materialType: input.materialType!, quantity: input.quantity!, units: input.units!, price: input.price! }];
+  return [{ material: input.material!, materialType: input.materialType!, quantity: input.quantity!, units: input.units!, price: input.price!, deliveryDate: input.deliveryDate }];
 }
 
 export async function getOrderItems(db: D1Database, orderId: string) {
-  const result = await db.prepare(`SELECT id, order_id, material, material_type, quantity, units, price FROM order_items WHERE order_id = ? ORDER BY rowid ASC`).bind(orderId).all<OrderItemRecord>();
-  return result.results.map((item) => ({ id: item.id, material: item.material, materialType: item.material_type, quantity: item.quantity, units: item.units, price: item.price, value: item.quantity * item.price }));
+  const result = await db.prepare(`SELECT id, order_id, material, material_type, quantity, units, price, delivery_date FROM order_items WHERE order_id = ? ORDER BY rowid ASC`).bind(orderId).all<OrderItemRecord>();
+  return result.results.map((item) => ({ id: item.id, material: item.material, materialType: item.material_type, quantity: item.quantity, units: item.units, price: item.price, value: item.quantity * item.price, deliveryDate: item.delivery_date }));
 }
 
 export async function replaceOrderItems(db: D1Database, orderId: string, items: OrderItemInput[]) {
   if (!items.length) throw new Error("At least one order item is required");
-  const statements = [db.prepare(`DELETE FROM order_items WHERE order_id = ?`).bind(orderId), ...items.map((item, index) => db.prepare(`INSERT INTO order_items (id, order_id, material, material_type, quantity, units, price) VALUES (?, ?, ?, ?, ?, ?, ?)`).bind(`OI-${crypto.randomUUID()}-${index}`, orderId, item.material, item.materialType, item.quantity, item.units, item.price))];
+  const statements = [db.prepare(`DELETE FROM order_items WHERE order_id = ?`).bind(orderId), ...items.map((item, index) => db.prepare(`INSERT INTO order_items (id, order_id, material, material_type, quantity, units, price, delivery_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`).bind(`OI-${crypto.randomUUID()}-${index}`, orderId, item.material, item.materialType, item.quantity, item.units, item.price, item.deliveryDate))];
   await db.batch(statements);
 }
 
-function toOrderResponse(row: OrderRecord, customer: CustomerInfo, items: Array<{ id: string; material: string; materialType: string; quantity: number; units: string; price: number; value: number }>) {
-  const normalizedItems = items.length ? items : [{ id: `OI-${row.id}`, material: row.material, materialType: row.material_type, quantity: row.quantity, units: row.units, price: row.price, value: row.quantity * row.price }];
+function toOrderResponse(row: OrderRecord, customer: CustomerInfo, items: Array<{ id: string; material: string; materialType: string; quantity: number; units: string; price: number; value: number; deliveryDate: string }>) {
+  const normalizedItems = items.length ? items : [{ id: `OI-${row.id}`, material: row.material, materialType: row.material_type, quantity: row.quantity, units: row.units, price: row.price, value: row.quantity * row.price, deliveryDate: row.delivery_date }];
   return {
     id: row.id, invoiceNumber: row.invoice_number, customerId: row.customer_id, customerName: customer.name, company: customer.company,
     material: normalizedItems[0].material, materialType: normalizedItems[0].materialType,
@@ -56,7 +56,7 @@ export async function createOrder(db: D1Database, employee: AuthenticatedEmploye
   if (existing) throw new Error("Order ID already exists");
   await db.batch([
     db.prepare(`INSERT INTO orders (id, invoice_number, customer_id, material, material_type, quantity, units, price, payment_status, status, employee_id, created_at, delivery_date, address, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).bind(id, invoiceNumber, input.customerId, first.material, first.materialType, first.quantity, first.units, first.price, input.paymentStatus, input.status, assignedEmployeeId, createdAt, input.deliveryDate, input.address, input.notes),
-    ...items.map((item, index) => db.prepare(`INSERT INTO order_items (id, order_id, material, material_type, quantity, units, price) VALUES (?, ?, ?, ?, ?, ?, ?)`).bind(`OI-${crypto.randomUUID()}-${index}`, id, item.material, item.materialType, item.quantity, item.units, item.price)),
+    ...items.map((item, index) => db.prepare(`INSERT INTO order_items (id, order_id, material, material_type, quantity, units, price, delivery_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`).bind(`OI-${crypto.randomUUID()}-${index}`, id, item.material, item.materialType, item.quantity, item.units, item.price, item.deliveryDate)),
   ]);
   await createNotification(db, { type: "ORDER", title: "New order created", description: `Order ${id} was created for ${customer.name}.`, targetId: id });
   const order = await getOrderWithCustomer(db, id); if (!order) throw new Error("Order was created but could not be retrieved"); return order;
