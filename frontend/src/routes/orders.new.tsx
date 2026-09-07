@@ -19,7 +19,7 @@ import type { Customer, Order } from "@/types";
 import { FollowUpFormDialogApi } from "@/components/common/followup-form-dialog-api";
 
 export const Route = createFileRoute("/orders/new")({ head: () => ({ meta: [{ title: "New order · Saravana Traders CRM" }] }), component: NewOrder });
-const emptyItem = (): CreateOrderItemInput => ({ material: "", materialType: "", quantity: 1, units: TEXTILE_UNITS[0] ?? "Tons", price: 0 });
+const emptyItem = (): CreateOrderItemInput => ({ material: "", materialType: "General", quantity: 1, units: TEXTILE_UNITS[0] ?? "Tons", price: 0 });
 
 function NewOrder() {
   const user = useRequireAuth(); const navigate = useNavigate(); const queryClient = useQueryClient();
