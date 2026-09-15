@@ -5,7 +5,6 @@ import { ArrowLeft, CalendarPlus, Save } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/common/glass";
 import { CustomerLeadSearch } from "@/components/common/customer-lead-search";
-import { FollowUpFormDialogApi } from "@/components/common/followup-form-dialog-api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,7 +18,9 @@ import {
 } from "@/components/ui/select";
 import { useRequireAuth } from "@/hooks/use-require-auth";
 import { getEmployees } from "@/api/employees";
-import { createLead, type CreateLeadInput } from "@/api/leads";
+import { createLead } from "@/api/leads";
+import { createFollowUp } from "@/api/followups";
+import type { CreateLeadInput } from "@/api/leads";
 import type { Lead } from "@/types";
 import { toast } from "sonner";
 
@@ -43,8 +44,6 @@ const initialForm: CreateLeadInput = {
   phone: "",
   email: "",
   address: "",
-  // Kept in the API payload for backward compatibility with the existing schema.
-  // These fields are intentionally no longer exposed in the Lead UI.
   material: "Not specified",
   units: "N/A",
   quantity: 1,
@@ -67,7 +66,8 @@ function NewLead() {
   const employees = employeesQuery.data ?? [];
   const [form, setForm] = useState<CreateLeadInput>(initialForm);
   const [createdLead, setCreatedLead] = useState<Lead | null>(null);
-  const [followUpOpen, setFollowUpOpen] = useState(false);
+  const [followUpDate, setFollowUpDate] = useState("");
+  const [followUpTime, setFollowUpTime] = useState("");
 
   const createMutation = useMutation({
     mutationFn: createLead,
@@ -94,6 +94,35 @@ function NewLead() {
     if (createdLead) setCreatedLead(null);
   };
 
+  const saveFollowUp = async () => {
+    if (!createdLead) return;
+    if (!followUpDate || !followUpTime) {
+      toast.error("Complete both follow-up date and time");
+      return;
+    }
+
+    try {
+      await createFollowUp({
+        title: `Lead follow-up · ${createdLead.name}`,
+        description: `Follow-up for lead ${createdLead.name}`,
+        date: followUpDate,
+        time: followUpTime,
+        status: "Pending",
+        priority: "Medium",
+        reminder: false,
+        ...(createdLead.employeeId ? { employeeId: createdLead.employeeId } : {}),
+        relatedType: "Lead",
+        relatedId: createdLead.id,
+      });
+      await queryClient.invalidateQueries({ queryKey: ["follow-ups"] });
+      toast.success("Follow-up scheduled");
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Unable to schedule follow-up",
+      );
+    }
+  };
+
   const submit = (event: FormEvent) => {
     event.preventDefault();
 
@@ -107,6 +136,11 @@ function NewLead() {
       return;
     }
 
+    if ((followUpDate && !followUpTime) || (!followUpDate && followUpTime)) {
+      toast.error("Complete both follow-up date and time");
+      return;
+    }
+
     createMutation.mutate({
       ...form,
       name: form.name.trim(),
@@ -116,8 +150,6 @@ function NewLead() {
       address: form.address.trim(),
       duration: form.duration.trim(),
       notes: form.notes?.trim() ?? "",
-      // The current backend schema still requires these legacy Lead fields.
-      // They are no longer part of the client-facing Lead form.
       material: "Not specified",
       units: "N/A",
       quantity: 1,
@@ -248,7 +280,34 @@ function NewLead() {
             </div>
           </div>
 
-          <div className="mt-4 flex flex-wrap gap-2">
+          <div className="mt-4 rounded-2xl border border-border/70 bg-mint/10 p-3">
+            <div className="mb-3 flex items-center gap-2">
+              <CalendarPlus className="size-4 text-teal" />
+              <p className="text-sm font-semibold">Follow-up</p>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <Label>Date</Label>
+                <Input
+                  type="date"
+                  value={followUpDate}
+                  onChange={(e) => setFollowUpDate(e.target.value)}
+                  className="glass-soft h-10 border-0"
+                />
+              </div>
+              <div>
+                <Label>Time</Label>
+                <Input
+                  type="time"
+                  value={followUpTime}
+                  onChange={(e) => setFollowUpTime(e.target.value)}
+                  className="glass-soft h-10 border-0"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4 flex flex-wrap items-center gap-2">
             <Button
               type="submit"
               disabled={createMutation.isPending}
@@ -261,9 +320,9 @@ function NewLead() {
             <Button
               type="button"
               variant="outline"
-              className="glass-soft gap-2 rounded-xl border-0"
-              disabled={!createdLead}
-              onClick={() => setFollowUpOpen(true)}
+              className="gap-2 rounded-xl"
+              disabled={!createdLead || createMutation.isPending || !followUpDate || !followUpTime}
+              onClick={() => void saveFollowUp()}
             >
               <CalendarPlus className="size-4" />
               Follow-up
@@ -280,18 +339,6 @@ function NewLead() {
           </div>
         </form>
       </div>
-
-      {createdLead && (
-        <FollowUpFormDialogApi
-          open={followUpOpen}
-          onOpenChange={setFollowUpOpen}
-          target={{
-            id: createdLead.id,
-            name: createdLead.name,
-            type: "Lead",
-          }}
-        />
-      )}
     </AppShell>
   );
 }
