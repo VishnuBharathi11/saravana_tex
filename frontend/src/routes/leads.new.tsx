@@ -4,7 +4,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, CalendarPlus, Save } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/common/glass";
-import { CustomerLeadSearch } from "@/components/common/customer-lead-search";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -52,6 +51,7 @@ const initialForm: CreateLeadInput = {
   status: "New",
   source: "Other",
   feedback: "",
+  priority: "Medium",
 };
 
 function NewLead() {
@@ -126,16 +126,6 @@ function NewLead() {
   const submit = (event: FormEvent) => {
     event.preventDefault();
 
-    if (
-      !form.name.trim() ||
-      !form.company.trim() ||
-      !form.address.trim() ||
-      !form.duration
-    ) {
-      toast.error("Complete all required lead fields");
-      return;
-    }
-
     if ((followUpDate && !followUpTime) || (!followUpDate && followUpTime)) {
       toast.error("Complete both follow-up date and time");
       return;
@@ -155,6 +145,7 @@ function NewLead() {
       quantity: 1,
       source: "Other",
       feedback: form.feedback?.trim() ?? "",
+      priority: form.priority,
       ...(user.role === "Admin" && form.employeeId
         ? { employeeId: form.employeeId }
         : {}),
@@ -174,22 +165,8 @@ function NewLead() {
 
         <PageHeader
           title="Create lead"
-          subtitle="Search an existing customer or capture a fresh enquiry"
+          subtitle="Capture a fresh enquiry"
         />
-
-        <div className="glass rounded-2xl p-4">
-          <Label>Search existing customer</Label>
-          <div className="mt-1.5">
-            <CustomerLeadSearch
-              value={null}
-              onChange={(id) => {
-                if (id) navigate({ to: "/customers/$id", params: { id } });
-              }}
-              typeFilter="Customer"
-              placeholder="Type a customer or company name…"
-            />
-          </div>
-        </div>
 
         <form className="glass rounded-2xl p-4" onSubmit={submit}>
           <p className="text-sm font-semibold">New lead details</p>
@@ -208,10 +185,24 @@ function NewLead() {
                   value={form[field.key]}
                   onChange={(e) => setField(field.key, e.target.value)}
                   className="glass-soft h-10 border-0"
-                  required={field.key !== "phone"}
+
                 />
               </div>
             ))}
+
+            <div className="space-y-1.5">
+              <Label>Priority</Label>
+              <Select value={form.priority ?? "Medium"} onValueChange={(value) => setField("priority", value)}>
+                <SelectTrigger className="glass-soft h-10 w-full border-0">
+                  <SelectValue placeholder="Lead priority" />
+                </SelectTrigger>
+                <SelectContent>
+                  {["High", "Medium", "Low"].map((priority) => (
+                    <SelectItem key={priority} value={priority}>{priority}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
             <div className="space-y-1.5">
               <Label>Duration</Label>
@@ -263,7 +254,6 @@ function NewLead() {
                 value={form.address}
                 onChange={(e) => setField("address", e.target.value)}
                 className="glass-soft h-10 border-0"
-                required
               />
             </div>
 
