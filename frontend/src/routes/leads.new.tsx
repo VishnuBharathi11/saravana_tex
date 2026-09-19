@@ -68,6 +68,7 @@ function NewLead() {
   const [createdLead, setCreatedLead] = useState<Lead | null>(null);
   const [followUpDate, setFollowUpDate] = useState("");
   const [followUpTime, setFollowUpTime] = useState("");
+  const [followUpCreated, setFollowUpCreated] = useState(false);
 
   const createMutation = useMutation({
     mutationFn: createLead,
@@ -77,7 +78,29 @@ function NewLead() {
       );
       await queryClient.invalidateQueries({ queryKey: ["leads"] });
       setCreatedLead(lead);
-      toast.success("Lead saved successfully");
+      if (followUpDate && followUpTime) {
+        try {
+          await createFollowUp({
+            title: `Lead follow-up · ${lead.name}`,
+            description: `Follow-up for lead ${lead.name}`,
+            date: followUpDate,
+            time: followUpTime,
+            status: "Pending",
+            priority: "Medium",
+            reminder: false,
+            ...(lead.employeeId ? { employeeId: lead.employeeId } : {}),
+            relatedType: "Lead",
+            relatedId: lead.id,
+          });
+          setFollowUpCreated(true);
+          await queryClient.invalidateQueries({ queryKey: ["follow-ups"] });
+          toast.success("Lead saved and follow-up scheduled");
+        } catch (error) {
+          toast.error(error instanceof Error ? error.message : "Lead saved, but follow-up could not be scheduled");
+        }
+      } else {
+        toast.success("Lead saved successfully");
+      }
     },
     onError: (error) => {
       toast.error(error instanceof Error ? error.message : "Unable to save lead");
@@ -95,7 +118,7 @@ function NewLead() {
   };
 
   const saveFollowUp = async () => {
-    if (!createdLead) return;
+    if (!createdLead || followUpCreated) return;
     if (!followUpDate || !followUpTime) {
       toast.error("Complete both follow-up date and time");
       return;
@@ -115,6 +138,7 @@ function NewLead() {
         relatedId: createdLead.id,
       });
       await queryClient.invalidateQueries({ queryKey: ["follow-ups"] });
+      setFollowUpCreated(true);
       toast.success("Follow-up scheduled");
     } catch (error) {
       toast.error(
@@ -311,11 +335,11 @@ function NewLead() {
               type="button"
               variant="outline"
               className="gap-2 rounded-xl"
-              disabled={!createdLead || createMutation.isPending || !followUpDate || !followUpTime}
+              disabled={!createdLead || followUpCreated || createMutation.isPending || !followUpDate || !followUpTime}
               onClick={() => void saveFollowUp()}
             >
               <CalendarPlus className="size-4" />
-              Follow-up
+              {followUpCreated ? "Follow-up scheduled" : "Follow-up"}
             </Button>
 
             <Button
