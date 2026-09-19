@@ -75,6 +75,7 @@ leads.get('/', async (c) => {
 		source: string;
 		created_at: string;
 		feedback: string;
+		priority: string;
 		converted_customer_id: string | null;
 	}>;
 
@@ -109,6 +110,7 @@ leads.get('/', async (c) => {
 		source: row.source,
 		createdAt: row.created_at,
 		feedback: row.feedback,
+		priority: row.priority,
 		...(row.converted_customer_id ? { convertedCustomerId: row.converted_customer_id } : {}),
 	}));
 
@@ -565,8 +567,7 @@ leads.post("/:id/convert", async (c) => {
           status,
           source,
           created_at,
-          feedback,
-          priority
+          feedback
         )
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Active', ?, ?, ?)
       `)
@@ -586,7 +587,6 @@ leads.post("/:id/convert", async (c) => {
         lead.source,
         now,
         lead.feedback,
-        lead.priority,
       ),
 
     db
