@@ -11,6 +11,7 @@ import {
 import {
   createCustomer,
   getCustomerTotals,
+  refreshCustomerActivityStatuses,
   toCustomerResponse,
   type CustomerRecord,
 } from "../services/customer.service";
@@ -45,6 +46,7 @@ function mapCustomerRow(
  */
 customers.get("/", async (c) => {
   const db = c.env.saravana_traders_db;
+  await refreshCustomerActivityStatuses(db);
   const employee = c.get("employee");
 
   const scope = await getEmployeeScope(db, employee.id);
@@ -112,6 +114,7 @@ customers.get("/", async (c) => {
  */
 customers.get("/:id", async (c) => {
   const db = c.env.saravana_traders_db;
+  await refreshCustomerActivityStatuses(db);
   const employee = c.get("employee");
   const id = c.req.param("id");
 
