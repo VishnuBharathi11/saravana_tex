@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/select";
 import { useRequireAuth } from "@/hooks/use-require-auth";
 import { toast } from "sonner";
-import type { Lead, LeadStatus } from "@/types";
+import type { Lead, LeadStatus, Priority } from "@/types";
 import { TEXTILE_UNITS } from "@/lib/constants";
 import { getFollowUps } from "@/api/followups";
 import { canEditRecord, canDeleteRecord } from "@/lib/permissions";
@@ -58,6 +58,7 @@ const STATUSES: LeadStatus[] = [
 ];
 const UNITS = TEXTILE_UNITS;
 const DURATIONS = ["Immediate", "1 Week", "2 Weeks", "1 Month", "Quarterly"];
+const PRIORITIES: Priority[] = ["High", "Medium", "Low"];
 
 function Field({ label, value }: { label: string; value: string | number }) {
   return (
@@ -192,6 +193,7 @@ function LeadDetail() {
       status: d.status,
       source: d.source,
       feedback: d.feedback,
+      priority: d.priority,
     });
   };
 
@@ -311,6 +313,14 @@ function LeadDetail() {
                 </div>
 
                 <div className="space-y-1.5">
+                  <Label>Priority</Label>
+                  <Select value={d.priority} onValueChange={(v) => upd({ priority: v as Priority })}>
+                    <SelectTrigger className="h-10 w-full border-0 bg-white/70"><SelectValue /></SelectTrigger>
+                    <SelectContent>{PRIORITIES.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1.5">
                   <Label>Status</Label>
                   <Select value={d.status} onValueChange={(v) => upd({ status: v as LeadStatus })}>
                     <SelectTrigger className="h-10 w-full border-0 bg-white/70"><SelectValue /></SelectTrigger>
@@ -337,6 +347,7 @@ function LeadDetail() {
                 <Field label="Material required" value={lead.material} />
                 <Field label="Quantity" value={`${lead.quantity} ${lead.units}`} />
                 <Field label="Duration" value={lead.duration} />
+                <Field label="Priority" value={lead.priority} />
                 <EmployeeLink employeeId={lead.employeeId} />
                 <div className="sm:col-span-2"><Field label="Address" value={lead.address} /></div>
               </div>
