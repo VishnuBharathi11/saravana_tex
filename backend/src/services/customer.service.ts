@@ -1,12 +1,13 @@
 import type { CreateCustomerInput } from "../schemas/customer.schema";
 import type { AuthenticatedEmployee } from "./auth.service";
 import { createNotification } from "./notification.service";
-export interface CustomerRecord { id: string; name: string; company: string; phone: string; email: string; address: string; material: string; units: string; quantity: number; duration: string; notes: string; employee_id: string; status: string; source: string; created_at: string; feedback: string; }
+export interface CustomerRecord { id: string; name: string; company: string; phone: string; email: string; address: string; material: string; units: string; quantity: number; duration: string; notes: string; employee_id: string; status: string; activity_status: "Active" | "Inactive"; source: string; created_at: string; feedback: string; }
 export async function refreshCustomerActivityStatuses(db: D1Database) {
   await db.prepare(`
     UPDATE customers
-    SET status = 'Inactive'
+    SET activity_status = 'Inactive'
     WHERE status = 'Active'
+      AND activity_status = 'Active'
       AND julianday(created_at) < julianday('now', '-15 days')
       AND NOT EXISTS (
         SELECT 1
@@ -22,7 +23,7 @@ export async function getCustomerTotals(db: D1Database, customerId: string) {
   const result = await db.prepare(`SELECT COUNT(DISTINCT o.id) AS total_orders, COALESCE(SUM(oi.quantity * oi.price), 0) AS total_value FROM orders o LEFT JOIN order_items oi ON oi.order_id = o.id WHERE o.customer_id = ? AND o.status <> 'Cancelled'`).bind(customerId).first<{ total_orders: number; total_value: number }>();
   return { totalOrders: Number(result?.total_orders ?? 0), totalValue: Number(result?.total_value ?? 0) };
 }
-export function toCustomerResponse(row: CustomerRecord, totals: { totalOrders: number; totalValue: number }) { return { id: row.id, name: row.name, company: row.company, phone: row.phone, email: row.email, address: row.address, material: row.material, units: row.units, quantity: row.quantity, duration: row.duration, notes: row.notes, employeeId: row.employee_id, status: row.status, source: row.source, createdAt: row.created_at, feedback: row.feedback, totalOrders: totals.totalOrders, totalValue: totals.totalValue }; }
+export function toCustomerResponse(row: CustomerRecord, totals: { totalOrders: number; totalValue: number }) { return { id: row.id, name: row.name, company: row.company, phone: row.phone, email: row.email, address: row.address, material: row.material, units: row.units, quantity: row.quantity, duration: row.duration, notes: row.notes, employeeId: row.employee_id, status: row.status === "Active" ? row.activity_status : row.status, source: row.source, createdAt: row.created_at, feedback: row.feedback, totalOrders: totals.totalOrders, totalValue: totals.totalValue }; }
 export async function createCustomer(db: D1Database, employee: AuthenticatedEmployee, input: CreateCustomerInput) {
   let assignedEmployeeId = employee.id;
   if (employee.role === "Admin" && input.employeeId) { const assigned = await db.prepare(`SELECT id FROM employees WHERE id = ? AND status = 'Active' LIMIT 1`).bind(input.employeeId).first<{ id: string }>(); if (!assigned) throw new Error("Assigned employee not found or inactive"); assignedEmployeeId = assigned.id; }
