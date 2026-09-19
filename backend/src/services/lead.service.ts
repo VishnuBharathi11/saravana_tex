@@ -98,9 +98,10 @@ export async function createLead(
         status,
         source,
         created_at,
-        feedback
+        feedback,
+        priority
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
     )
     .bind(
@@ -151,6 +152,7 @@ export async function createLead(
         source,
         created_at,
         feedback,
+        priority,
         converted_customer_id
       FROM leads
       WHERE id = ?
