@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CalendarPlus, CheckCircle2, Pencil, Trash2 } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
@@ -24,6 +24,7 @@ type Filter = "Lead" | "Order";
 function FollowUpsPage() {
   const user = useRequireAuth();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [filter, setFilter] = useState<Filter>("Lead");
   const [editing, setEditing] = useState<FollowUp | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<FollowUp | null>(null);
@@ -87,9 +88,16 @@ function FollowUpsPage() {
                 <thead><tr className="border-b border-border/60 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground"><th className="px-3 py-2">Title</th><th className="px-3 py-2">Related</th><th className="px-3 py-2">Date</th><th className="px-3 py-2">Time</th><th className="px-3 py-2">Priority</th><th className="px-3 py-2">Status</th><th className="px-3 py-2">Actions</th></tr></thead>
                 <tbody>
                   {rows.map((followUp) => (
-                    <tr key={followUp.id} className="border-b border-border/50 hover:bg-mint/20">
+                    <tr
+                      key={followUp.id}
+                      className="cursor-pointer border-b border-border/50 hover:bg-mint/20"
+                      onClick={() => navigate({
+                        to: followUp.relatedType === "Lead" ? "/leads/$id" : "/orders/$id",
+                        params: { id: followUp.relatedId },
+                      })}
+                    >
                       <td className="px-3 py-3 font-medium">{followUp.title}</td><td className="px-3 py-3">{followUp.relatedName}</td><td className="px-3 py-3 whitespace-nowrap">{followUp.date}</td><td className="px-3 py-3 whitespace-nowrap">{followUp.time}</td><td className="px-3 py-3"><StatusChip value={followUp.priority} /></td><td className="px-3 py-3"><StatusChip value={followUp.status} /></td>
-                      <td className="px-3 py-3"><div className="flex items-center gap-1">{followUp.status !== "Completed" && <Button variant="ghost" size="icon" title="Complete" onClick={() => completeMutation.mutate(followUp.id)}><CheckCircle2 className="size-4" /></Button>}<Button variant="ghost" size="icon" title="Edit" onClick={() => setEditing(followUp)}><Pencil className="size-4" /></Button><Button variant="ghost" size="icon" title="Delete" className="text-destructive" onClick={() => setDeleteTarget(followUp)}><Trash2 className="size-4" /></Button></div></td>
+                      <td className="px-3 py-3"><div className="flex items-center gap-1">{followUp.status !== "Completed" && <Button variant="ghost" size="icon" title="Complete" onClick={(event) => { event.stopPropagation(); completeMutation.mutate(followUp.id); }}><CheckCircle2 className="size-4" /></Button>}<Button variant="ghost" size="icon" title="Edit" onClick={(event) => { event.stopPropagation(); setEditing(followUp); }}><Pencil className="size-4" /></Button><Button variant="ghost" size="icon" title="Delete" className="text-destructive" onClick={(event) => { event.stopPropagation(); setDeleteTarget(followUp); }}><Trash2 className="size-4" /></Button></div></td>
                     </tr>
                   ))}
                   {rows.length === 0 && <tr><td colSpan={7} className="px-3 py-10 text-center text-muted-foreground">No {filter.toLowerCase()} follow-ups found.</td></tr>}
