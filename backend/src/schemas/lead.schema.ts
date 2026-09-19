@@ -4,7 +4,7 @@ export const createLeadSchema = z.object({
   name: z.string().trim().max(150).default("Unnamed lead"),
   company: z.string().trim().max(200).default("Unknown company"),
   phone: z.string().trim().max(30).default(""),
-  email: z.string().trim().email().or(z.literal("")),
+  email: z.string().trim().email().or(z.literal("")).default(""),
   address: z.string().trim().max(500).default(""),
   material: z.string().trim().max(100).default("Not specified"),
   units: z.string().trim().max(50).default("N/A"),
