@@ -2,6 +2,22 @@ import type { CreateCustomerInput } from "../schemas/customer.schema";
 import type { AuthenticatedEmployee } from "./auth.service";
 import { createNotification } from "./notification.service";
 export interface CustomerRecord { id: string; name: string; company: string; phone: string; email: string; address: string; material: string; units: string; quantity: number; duration: string; notes: string; employee_id: string; status: string; source: string; created_at: string; feedback: string; }
+export async function refreshCustomerActivityStatuses(db: D1Database) {
+  await db.prepare(`
+    UPDATE customers
+    SET status = 'Inactive'
+    WHERE status = 'Active'
+      AND julianday(created_at) < julianday('now', '-15 days')
+      AND NOT EXISTS (
+        SELECT 1
+        FROM orders o
+        WHERE o.customer_id = customers.id
+          AND o.status <> 'Cancelled'
+          AND julianday(o.created_at) >= julianday('now', '-15 days')
+      )
+  `).run();
+}
+
 export async function getCustomerTotals(db: D1Database, customerId: string) {
   const result = await db.prepare(`SELECT COUNT(DISTINCT o.id) AS total_orders, COALESCE(SUM(oi.quantity * oi.price), 0) AS total_value FROM orders o LEFT JOIN order_items oi ON oi.order_id = o.id WHERE o.customer_id = ? AND o.status <> 'Cancelled'`).bind(customerId).first<{ total_orders: number; total_value: number }>();
   return { totalOrders: Number(result?.total_orders ?? 0), totalValue: Number(result?.total_value ?? 0) };
