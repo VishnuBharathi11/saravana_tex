@@ -26,6 +26,7 @@ export interface CreateLeadInput {
   status?: LeadStatus;
   source: string;
   feedback?: string;
+  priority?: "Low" | "Medium" | "High";
 }
 
 export type UpdateLeadInput = Partial<
