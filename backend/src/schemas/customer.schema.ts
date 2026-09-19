@@ -12,7 +12,7 @@ export const createCustomerSchema = z.object({
   duration: z.string().trim().min(1).max(50),
   notes: z.string().trim().max(2000).default(""),
   employeeId: z.string().trim().min(1).optional(),
-  status: z.enum(["Active", "Inactive", "Dormant", "VIP"]).default("Active"),
+  status: z.enum(["Active", "Dormant", "VIP"]).default("Active"),
   source: z.string().trim().min(1).max(100),
   feedback: z.string().trim().max(2000).default(""),
 });
