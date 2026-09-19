@@ -19,6 +19,7 @@ export interface LeadRecord {
   source: string;
   created_at: string;
   feedback: string;
+  priority: string;
   converted_customer_id: string | null;
 }
 
@@ -40,6 +41,7 @@ export function toLeadResponse(row: LeadRecord) {
     source: row.source,
     createdAt: row.created_at,
     feedback: row.feedback,
+    priority: row.priority,
     ...(row.converted_customer_id
       ? { convertedCustomerId: row.converted_customer_id }
       : {}),
@@ -118,6 +120,7 @@ export async function createLead(
       input.source,
       createdAt,
       input.feedback,
+      input.priority,
     )
     .run();
 
