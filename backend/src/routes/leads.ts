@@ -50,6 +50,7 @@ leads.get('/', async (c) => {
         source,
         created_at,
         feedback,
+        priority,
         converted_customer_id
       FROM leads
       ORDER BY created_at DESC
@@ -205,6 +206,7 @@ leads.get("/:id", async (c) => {
         source,
         created_at,
         feedback,
+        priority,
         converted_customer_id
       FROM leads
       WHERE id = ?
@@ -331,6 +333,7 @@ leads.patch("/:id", async (c) => {
     status: data.status ?? existing.status,
     source: data.source ?? existing.source,
     feedback: data.feedback ?? existing.feedback,
+    priority: data.priority ?? existing.priority,
   };
 
   await db
@@ -349,7 +352,8 @@ leads.patch("/:id", async (c) => {
         notes = ?,
         status = ?,
         source = ?,
-        feedback = ?
+        feedback = ?,
+        priority = ?
       WHERE id = ?
     `)
     .bind(
@@ -366,6 +370,7 @@ leads.patch("/:id", async (c) => {
       updated.status,
       updated.source,
       updated.feedback,
+      updated.priority,
       id,
     )
     .run();
@@ -389,6 +394,7 @@ leads.patch("/:id", async (c) => {
         source,
         created_at,
         feedback,
+        priority,
         converted_customer_id
       FROM leads
       WHERE id = ?
@@ -559,7 +565,8 @@ leads.post("/:id/convert", async (c) => {
           status,
           source,
           created_at,
-          feedback
+          feedback,
+          priority
         )
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Active', ?, ?, ?)
       `)
@@ -579,6 +586,7 @@ leads.post("/:id/convert", async (c) => {
         lead.source,
         now,
         lead.feedback,
+        lead.priority,
       ),
 
     db
