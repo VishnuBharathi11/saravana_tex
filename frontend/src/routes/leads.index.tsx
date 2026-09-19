@@ -60,6 +60,7 @@ function LeadsPage() {
     employees.find((employee) => employee.id === employeeId)?.name ?? "Unassigned";
 
   const leads = leadsQuery.data ?? [];
+  const leadPriorityRank: Record<string, number> = { Converted: 1, New: 2 };
   const leadRows = leads.filter(
     (r) =>
       (leadStatus === "All" || r.status === leadStatus) &&
@@ -69,6 +70,8 @@ function LeadsPage() {
           .toLowerCase()
           .includes(leadSearch.toLowerCase())),
   );
+
+  const orderedLeadRows = [...leadRows].sort((a, b) => (leadPriorityRank[a.status] ?? 3) - (leadPriorityRank[b.status] ?? 3) || b.createdAt.localeCompare(a.createdAt));
 
   const leadColumns: Column<Lead>[] = [
     { key: "avatar", header: "Profile", value: (r) => r.name, render: (r) => <Avatar name={r.name} /> },
@@ -131,13 +134,13 @@ function LeadsPage() {
                 Retry
               </Button>
             </div>
-          ) : leadRows.length === 0 ? (
+          ) : orderedLeadRows.length === 0 ? (
             <div className="glass rounded-2xl p-8 text-center text-sm text-muted-foreground">
               {leads.length === 0 ? "No leads found." : "No leads match the current filters."}
             </div>
           ) : (
             <DataTable
-              rows={leadRows}
+              rows={orderedLeadRows}
               columns={leadColumns}
               rowKey={(r) => r.id}
               filters={leadFilters}
