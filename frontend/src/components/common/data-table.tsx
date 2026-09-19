@@ -28,6 +28,7 @@ export interface Column<T> {
   header: string;
   render?: (row: T) => ReactNode;
   value?: (row: T) => string | number;
+  sortValue?: (row: T) => string | number;
   className?: string;
 }
 
@@ -94,8 +95,8 @@ export function DataTable<T>({
       const col = columns.find((c) => c.key === sort.key);
       if (col) {
         out = [...out].sort((a, b) => {
-          const av = cellValue(a, col);
-          const bv = cellValue(b, col);
+          const av = col.sortValue ? col.sortValue(a) : cellValue(a, col);
+          const bv = col.sortValue ? col.sortValue(b) : cellValue(b, col);
           const cmp =
             typeof av === "number" && typeof bv === "number"
               ? av - bv
