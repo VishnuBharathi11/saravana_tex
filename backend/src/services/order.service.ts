@@ -55,7 +55,7 @@ export async function createOrder(db: D1Database, employee: AuthenticatedEmploye
   const customer = await db.prepare(`SELECT id, name, company, address, employee_id FROM customers WHERE id = ? LIMIT 1`).bind(input.customerId).first<CustomerInfo>();
   if (!customer) throw new Error("Customer not found");
   if (customer.status === "Inactive") {
-    await db.prepare(`UPDATE customers SET status = 'Active' WHERE id = ?`).bind(customer.id).run();
+    await db.prepare(`UPDATE customers SET activity_status = 'Active' WHERE id = ?`).bind(customer.id).run();
   }
   if (!(await canAccessRecord(db, employee, "Customer", customer.id))) throw new Error("Access denied to customer");
   let assignedEmployeeId = employee.id;
