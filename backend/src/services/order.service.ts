@@ -5,7 +5,7 @@ import { createNotification } from "./notification.service";
 
 export interface OrderRecord { id: string; invoice_number: string; customer_id: string; material: string; material_type: string; quantity: number; units: string; price: number; payment_status: string; status: string; employee_id: string; created_at: string; delivery_date: string; address: string; notes: string; }
 export interface OrderItemRecord { id: string; order_id: string; material: string; material_type: string; quantity: number; units: string; price: number; delivery_date: string; }
-interface CustomerInfo { id: string; name: string; company: string; address: string; employee_id: string; }
+interface CustomerInfo { id: string; name: string; company: string; address: string; employee_id: string; activity_status: "Active" | "Inactive"; }
 
 const dbOrderStatus = (status: string) => {
   if (status === "Cancel") return "Cancelled";
@@ -48,13 +48,13 @@ function toOrderResponse(row: OrderRecord, customer: CustomerInfo, items: Array<
 export async function getOrderWithCustomer(db: D1Database, id: string) {
   const row = await db.prepare(`SELECT o.*, c.id AS customer_ref_id, c.name AS customer_name, c.company AS customer_company, c.address AS customer_address, c.employee_id AS customer_employee_id FROM orders o INNER JOIN customers c ON c.id = o.customer_id WHERE o.id = ? LIMIT 1`).bind(id).first<OrderRecord & { customer_ref_id: string; customer_name: string; customer_company: string; customer_address: string; customer_employee_id: string }>();
   if (!row) return null;
-  return toOrderResponse(row, { id: row.customer_ref_id, name: row.customer_name, company: row.customer_company, address: row.customer_address, employee_id: row.customer_employee_id }, await getOrderItems(db, id));
+  return toOrderResponse(row, { id: row.customer_ref_id, name: row.customer_name, company: row.customer_company, address: row.customer_address, employee_id: row.customer_employee_id, activity_status: "Active" }, await getOrderItems(db, id));
 }
 
 export async function createOrder(db: D1Database, employee: AuthenticatedEmployee, input: CreateOrderInput) {
-  const customer = await db.prepare(`SELECT id, name, company, address, employee_id FROM customers WHERE id = ? LIMIT 1`).bind(input.customerId).first<CustomerInfo>();
+  const customer = await db.prepare(`SELECT id, name, company, address, employee_id, activity_status FROM customers WHERE id = ? LIMIT 1`).bind(input.customerId).first<CustomerInfo>();
   if (!customer) throw new Error("Customer not found");
-  if (customer.status === "Inactive") {
+  if (customer.activity_status === "Inactive") {
     await db.prepare(`UPDATE customers SET activity_status = 'Active' WHERE id = ?`).bind(customer.id).run();
   }
   if (!(await canAccessRecord(db, employee, "Customer", customer.id))) throw new Error("Access denied to customer");
