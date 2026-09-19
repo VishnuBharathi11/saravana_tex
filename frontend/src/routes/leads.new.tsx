@@ -216,7 +216,7 @@ function NewLead() {
 
             <div className="space-y-1.5">
               <Label>Priority</Label>
-              <Select value={form.priority ?? "Medium"} onValueChange={(value) => setField("priority", value)}>
+              <Select value={form.priority ?? "Medium"} onValueChange={(value) => setField("priority", value as "Low" | "Medium" | "High")}>
                 <SelectTrigger className="glass-soft h-10 w-full border-0">
                   <SelectValue placeholder="Lead priority" />
                 </SelectTrigger>
