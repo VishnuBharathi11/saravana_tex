@@ -101,6 +101,7 @@ function NewLead() {
       } else {
         toast.success("Lead saved successfully");
       }
+      navigate({ to: "/leads" });
     },
     onError: (error) => {
       toast.error(error instanceof Error ? error.message : "Unable to save lead");
