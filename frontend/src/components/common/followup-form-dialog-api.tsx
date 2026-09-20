@@ -27,6 +27,7 @@ import { getCustomers } from "@/api/customers";
 import { getLeads } from "@/api/leads";
 import { getOrders } from "@/api/orders";
 import type { Customer, FollowUp, FollowUpStatus, Lead, Order, Priority } from "@/types";
+import { TimePicker } from "@/components/ui/time-picker";
 
 const STATUSES: FollowUpStatus[] = [
   "Pending",
@@ -220,12 +221,7 @@ export function FollowUpFormDialogApi({
           </div>
           <div>
             <Label>Time</Label>
-            <Input
-              type="time"
-              value={form.time}
-              onChange={(e) => setForm({ ...form, time: e.target.value })}
-              className="h-10 border-0 bg-white/70"
-            />
+            <TimePicker value={form.time} onChange={(time) => setForm({ ...form, time })} />
           </div>
           <div className="sm:col-span-2">
             <Label>Title</Label>
