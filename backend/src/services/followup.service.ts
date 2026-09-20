@@ -35,6 +35,22 @@ export async function rollOverOverdueFollowUps(
 
   await db
     .prepare(`
+      DELETE FROM follow_ups
+      WHERE
+        (related_type = 'Lead' AND NOT EXISTS (
+          SELECT 1 FROM leads WHERE leads.id = follow_ups.related_id
+        ))
+        OR (related_type = 'Customer' AND NOT EXISTS (
+          SELECT 1 FROM customers WHERE customers.id = follow_ups.related_id
+        ))
+        OR (related_type = 'Order' AND NOT EXISTS (
+          SELECT 1 FROM orders WHERE orders.id = follow_ups.related_id
+        ))
+    `)
+    .run();
+
+  await db
+    .prepare(`
       UPDATE follow_ups
       SET date = ?
       WHERE status <> 'Completed'
