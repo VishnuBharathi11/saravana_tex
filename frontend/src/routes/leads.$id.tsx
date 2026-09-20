@@ -211,7 +211,7 @@ function LeadDetail() {
           company={lead.company}
           phone={lead.phone}
           email={lead.email}
-          meta={`${lead.source} · created ${lead.createdAt}`}
+          meta={`${lead.source} · created ${formatDateTime(lead.createdAt)}`}
           actions={
             editing ? (
               <>
