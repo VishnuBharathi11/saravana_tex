@@ -7,7 +7,7 @@ export interface OrderRecord { id: string; invoice_number: string; customer_id: 
 export interface OrderItemRecord { id: string; order_id: string; material: string; material_type: string; quantity: number; units: string; price: number; delivery_date: string; }
 interface CustomerInfo { id: string; name: string; company: string; address: string; employee_id: string; activity_status: "Active" | "Inactive"; }
 
-const dbOrderStatus = (status: string) => {
+export const dbOrderStatus = (status: string) => {
   if (status === "Cancel") return "Cancelled";
   if (status === "Pending") return "Draft";
   return status;
