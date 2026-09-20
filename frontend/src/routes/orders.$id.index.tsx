@@ -44,7 +44,7 @@ function OrderDetail() {
 <div className="mt-1">
 <Select value={order.status} onValueChange={(value) => statusMutation.mutate(value as OrderStatus)} disabled={statusMutation.isPending}>
 <SelectTrigger className="h-auto w-fit min-w-0 gap-1 rounded-full border-0 bg-transparent p-0 shadow-none focus:ring-0">
-<StatusChip value={order.status} className={statusMutation.isPending ? "opacity-60" : undefined} />
+<StatusChip value={order.status} className={statusMutation.isPending ? "opacity-60" : ""} />
 </SelectTrigger>
 <SelectContent>{ORDER_STATUSES.map((status) => <SelectItem key={status} value={status}>{status}</SelectItem>)}</SelectContent>
 </Select>
