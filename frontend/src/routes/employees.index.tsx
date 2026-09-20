@@ -107,9 +107,11 @@ function EmployeesPage() {
   }
 
   const employees = employeesQuery.data ?? [];
-  const rows = employees.filter(
-    (e) => (role === "All" || e.role === role) && (status === "All" || e.status === status),
-  );
+  const rows = employees
+    .filter(
+      (e) => (role === "All" || e.role === role) && (status === "All" || e.status === status),
+    )
+    .sort((a, b) => (Date.parse(b.createdAt) || 0) - (Date.parse(a.createdAt) || 0));
 
   const columns: Column<Employee>[] = [
     {
