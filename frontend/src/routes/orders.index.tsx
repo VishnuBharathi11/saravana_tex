@@ -44,6 +44,8 @@ function OrderStatusSelect({ order }: { order: Order }) {
       );
       queryClient.setQueryData(["orders", updated.id], updated);
       await queryClient.invalidateQueries({ queryKey: ["orders"] });
+      await queryClient.invalidateQueries({ queryKey: ["follow-ups"] });
+      await queryClient.invalidateQueries({ queryKey: ["dashboard", "follow-ups"] });
       toast.success(`Order ${order.id} status changed to ${displayOrderStatus(updated.status)}`);
     },
     onError: (error) => {
