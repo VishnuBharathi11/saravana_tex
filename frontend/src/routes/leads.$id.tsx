@@ -112,6 +112,8 @@ function LeadDetail() {
     mutationFn: () => deleteLead(id),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["leads"] });
+      await queryClient.invalidateQueries({ queryKey: ["follow-ups"] });
+      await queryClient.invalidateQueries({ queryKey: ["dashboard", "follow-ups"] });
       queryClient.removeQueries({ queryKey: ["leads", id] });
       toast.success("Lead deleted");
       navigate({ to: "/leads" });
