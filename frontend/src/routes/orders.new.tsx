@@ -58,6 +58,7 @@ function NewOrder() {
     } else {
       toast.success(`Order ${order.id} created`);
     }
+    navigate({ to: "/orders" });
   }, onError: (e) => toast.error(e instanceof Error ? e.message : "Unable to create order") });
   if (!user) return null;
   const employees = employeesQuery.data ?? []; const customers = customersQuery.data ?? []; const q = customerSearch.trim().toLowerCase(); const matches = q ? customers.filter((c) => `${c.name} ${c.company} ${c.phone}`.toLowerCase().includes(q)).slice(0, 15) : [];
