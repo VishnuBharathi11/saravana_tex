@@ -28,6 +28,8 @@ function OrderDetail() {
     onSuccess: async (updated) => {
       queryClient.setQueryData(["orders", id], updated);
       await queryClient.invalidateQueries({ queryKey: ["orders"] });
+      await queryClient.invalidateQueries({ queryKey: ["follow-ups"] });
+      await queryClient.invalidateQueries({ queryKey: ["dashboard", "follow-ups"] });
       toast.success(`Order status changed to ${updated.status}`);
     },
     onError: (error) => {
