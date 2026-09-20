@@ -90,7 +90,7 @@ function LeadsPage() {
       render: (r) => employeeName(r.employeeId),
     },
     { key: "status", header: "Status", render: (r) => <StatusChip value={r.status} /> },
-    { key: "createdAt", header: "Created", sortValue: (r) => Date.parse(r.createdAt) || 0 },
+    { key: "createdAt", header: "Created", sortValue: (r) => Date.parse(r.createdAt) || 0, value: (r) => r.createdAt },
   ];
 
   const leadFilters = [
