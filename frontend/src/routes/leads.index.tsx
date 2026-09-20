@@ -12,6 +12,7 @@ import { useRequireAuth } from "@/hooks/use-require-auth";
 import { getEmployees } from "@/api/employees";
 import { getLeads } from "@/api/leads";
 import type { Lead } from "@/types";
+import { formatDateTime } from "@/lib/date-time";
 
 export const Route = createFileRoute("/leads/")({
   head: () => ({
@@ -90,7 +91,7 @@ function LeadsPage() {
       render: (r) => employeeName(r.employeeId),
     },
     { key: "status", header: "Status", render: (r) => <StatusChip value={r.status} /> },
-    { key: "createdAt", header: "Created", sortValue: (r) => Date.parse(r.createdAt) || 0, value: (r) => r.createdAt },
+    { key: "createdAt", header: "Created", sortValue: (r) => Date.parse(r.createdAt) || 0, value: (r) => formatDateTime(r.createdAt), render: (r) => formatDateTime(r.createdAt) },
   ];
 
   const leadFilters = [
