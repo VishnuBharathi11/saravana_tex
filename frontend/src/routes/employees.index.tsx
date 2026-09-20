@@ -23,6 +23,7 @@ import {
 import { useRequireAuth } from "@/hooks/use-require-auth";
 import { toast } from "sonner";
 import type { Employee } from "@/types";
+import { formatDateTime } from "@/lib/date-time";
 import { AccessDialog } from "@/components/dashboard/access-dialog";
 import {
   deleteEmployee,
@@ -183,7 +184,7 @@ function EmployeesPage() {
         </Select>
       ),
     },
-    { key: "createdAt", header: "Created", sortValue: (e) => Date.parse(e.createdAt) || 0 },
+    { key: "createdAt", header: "Created", sortValue: (e) => Date.parse(e.createdAt) || 0, render: (e) => formatDateTime(e.createdAt) },
     {
       key: "actions",
       header: "Actions",
