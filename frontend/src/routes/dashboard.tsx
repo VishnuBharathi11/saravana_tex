@@ -29,8 +29,40 @@ function DashboardPage() {
   const summaryQuery = useQuery({ queryKey: ["dashboard", "summary"], queryFn: getDashboardSummary, enabled: Boolean(user) }); const followUpsQuery = useQuery({ queryKey: ["dashboard", "follow-ups"], queryFn: () => getDashboardFollowUps(), enabled: Boolean(user) }); const leadsQuery = useQuery({ queryKey: ["leads"], queryFn: getLeads, enabled: Boolean(user) }); const customersQuery = useQuery({ queryKey: ["customers"], queryFn: getCustomers, enabled: Boolean(user) }); const ordersQuery = useQuery({ queryKey: ["orders"], queryFn: getOrders, enabled: Boolean(user) }); const employeesQuery = useQuery({ queryKey: ["employees"], queryFn: getEmployees, enabled: Boolean(user) });
   const deleteMutation = useMutation({ mutationFn: (id: string) => deleteOrder(id), onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ["orders"] }); await queryClient.invalidateQueries({ queryKey: ["dashboard", "summary"] }); setConfirmDelete(false); setDeleteTargetId(null); toast.success("Order deleted"); }, onError: (e) => { setConfirmDelete(false); toast.error(e instanceof Error ? e.message : "Unable to delete order"); } });
   const summary = summaryQuery.data; const leads = leadsQuery.data ?? []; const customers = customersQuery.data ?? []; const orders = ordersQuery.data ?? []; const employees = employeesQuery.data ?? []; const followUps = followUpsQuery.data ?? []; const employeeName = (id: string) => employees.find((e) => e.id === id)?.name ?? "Unassigned"; const relatedName = (type: "Lead" | "Customer" | "Order", id: string) => type === "Lead" ? leads.find((l) => l.id === id)?.name ?? id : type === "Customer" ? customers.find((c) => c.id === id)?.name ?? id : orders.find((o) => o.id === id)?.id ?? id;
-  const orderBoard = useMemo(() => orders.filter((o) => orderStatusFilter === "All" || displayOrderStatus(o.status) === orderStatusFilter).slice().sort((a, b) => (ORDER_STATUS_RANK[displayOrderStatus(a.status)] ?? 4) - (ORDER_STATUS_RANK[displayOrderStatus(b.status)] ?? 4) || b.createdAt.localeCompare(a.createdAt)), [orders, orderStatusFilter]);
-  const boardRows = useMemo(() => { if (board === "converted") return leads.filter((l) => l.status === "Converted"); if (board === "orders") return orderBoard.map<Lead>((o) => ({ id: o.id, name: o.customerName, company: o.company, phone: o.id, email: "", address: o.address, material: o.items?.map((i) => i.material).join(", ") || o.material, units: o.units, quantity: o.items?.length || 1, duration: o.deliveryDate, notes: o.notes, employeeId: o.employeeId, status: "Converted", source: "Order", createdAt: o.createdAt, feedback: displayOrderStatus(o.status), priority: "Medium" })); if (board === "employees") return employees.slice(0, 25).map<Lead>((e) => ({ id: e.id, name: e.name, company: e.designation, phone: e.phone, email: e.email, address: "—", material: "—", units: "—", quantity: leads.filter((l) => l.employeeId === e.id).length, duration: e.status, notes: "", employeeId: e.id, status: "New", source: e.role, createdAt: e.createdAt, feedback: `${orders.filter((o) => o.employeeId === e.id).length} orders handled`, priority: "Medium" })); return leads; }, [board, employees, leads, orderBoard, orders]);
+  const leadStatusRank: Record<string, number> = { Converted: 1, New: 2 };
+  const orderBoard = useMemo(
+    () =>
+      orders
+        .filter((o) => orderStatusFilter === "All" || displayOrderStatus(o.status) === orderStatusFilter)
+        .slice()
+        .sort((a, b) => {
+          const statusDiff =
+            (ORDER_STATUS_RANK[displayOrderStatus(a.status)] ?? 4) -
+            (ORDER_STATUS_RANK[displayOrderStatus(b.status)] ?? 4);
+          if (statusDiff !== 0) return statusDiff;
+          return (Date.parse(b.createdAt) || 0) - (Date.parse(a.createdAt) || 0);
+        }),
+    [orders, orderStatusFilter],
+  );
+  const boardRows = useMemo(() => {
+  if (board === "converted") {
+    return leads
+      .filter((l) => l.status === "Converted")
+      .slice()
+      .sort((a, b) => (Date.parse(b.createdAt) || 0) - (Date.parse(a.createdAt) || 0));
+  }
+  if (board === "orders") return orderBoard.map<Lead>((o) => ({ id: o.id, name: o.customerName, company: o.company, phone: o.id, email: "", address: o.address, material: o.items?.map((i) => i.material).join(", ") || o.material, units: o.units, quantity: o.items?.length || 1, duration: o.deliveryDate, notes: o.notes, employeeId: o.employeeId, status: "Converted", source: "Order", createdAt: o.createdAt, feedback: displayOrderStatus(o.status), priority: "Medium" })); if (board === "employees") return employees
+    .slice()
+    .sort((a, b) => (Date.parse(b.createdAt) || 0) - (Date.parse(a.createdAt) || 0))
+    .slice(0, 25)
+    .map<Lead>((e) => ({ id: e.id, name: e.name, company: e.designation, phone: e.phone, email: e.email, address: "—", material: "—", units: "—", quantity: leads.filter((l) => l.employeeId === e.id).length, duration: e.status, notes: "", employeeId: e.id, status: "New", source: e.role, createdAt: e.createdAt, feedback: `${orders.filter((o) => o.employeeId === e.id).length} orders handled`, priority: "Medium" })); return leads
+    .slice()
+    .sort((a, b) => {
+      const statusDiff = (leadStatusRank[a.status] ?? 3) - (leadStatusRank[b.status] ?? 3);
+      if (statusDiff !== 0) return statusDiff;
+      return (Date.parse(b.createdAt) || 0) - (Date.parse(a.createdAt) || 0);
+    });
+}, [board, employees, leads, orderBoard, orders]);
   const boardColumns: Column<Lead>[] = board === "orders" ? [{ key: "phone", header: "Order ID" }, { key: "name", header: "Customer" }, { key: "company", header: "Company" }, { key: "material", header: "Items" }, { key: "feedback", header: "Status", value: (r) => r.feedback, sortValue: (r) => ({ Pending: 1, Confirmed: 2, Cancel: 3 }[r.feedback] ?? 99), render: (r) => <StatusChip value={r.feedback} /> }, { key: "duration", header: "Delivery" }, { key: "employeeId", header: "Assigned Employee", value: (r) => employeeName(r.employeeId), render: (r) => employeeName(r.employeeId) }, { key: "createdAt", header: "Created" }, { key: "actions", header: "", render: (r) => { const order = orders.find((o) => o.id === r.id); if (!order || !canDeleteRecord(user, order)) return null; return <Button variant="ghost" size="icon" className="text-destructive" onClick={(e) => { e.stopPropagation(); setDeleteTargetId(order.id); setConfirmDelete(true); }}><Trash2 className="size-4" /></Button>; } }] : [{ key: "name", header: "Name" }, { key: "phone", header: "Contact" }, { key: "company", header: "Company" }, { key: "material", header: "Material Required" }, { key: "quantity", header: "Quantity" }, { key: "units", header: "Units" }, { key: "duration", header: "Duration" }, { key: "status", header: "Status", render: (r) => <StatusChip value={r.status} /> }, { key: "employeeId", header: "Assigned Employee", value: (r) => employeeName(r.employeeId), render: (r) => employeeName(r.employeeId) }, { key: "feedback", header: "Feedback", className: "max-w-[240px] truncate" }, { key: "followup", header: "Follow-up", render: (r) => <span className="text-xs text-muted-foreground">{followUps.find((f) => f.relatedId === r.id)?.date ?? "Not scheduled"}</span> }];
   const upcoming = followUps.filter((f) => f.status !== "Completed" && (f.date >= TODAY || f.status === "Missed")).slice(0, 6); const missed = followUps.filter((f) => f.status === "Pending").slice(0, 6); const dataError = summaryQuery.error ?? followUpsQuery.error ?? leadsQuery.error ?? customersQuery.error ?? ordersQuery.error ?? employeesQuery.error; const loading = summaryQuery.isPending || followUpsQuery.isPending || leadsQuery.isPending || customersQuery.isPending || ordersQuery.isPending || employeesQuery.isPending;
   if (!user) return null; if (loading) return <AppShell><div className="glass rounded-2xl p-8 text-center text-sm text-muted-foreground">Loading dashboard...</div></AppShell>; if (dataError || !summary) return <AppShell><div className="glass rounded-2xl p-8 text-center"><p className="font-medium">Unable to load dashboard</p><p className="mt-1 text-sm text-muted-foreground">{dataError instanceof Error ? dataError.message : "Please try again."}</p></div></AppShell>;
