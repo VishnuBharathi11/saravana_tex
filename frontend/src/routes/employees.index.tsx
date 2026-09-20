@@ -183,7 +183,7 @@ function EmployeesPage() {
         </Select>
       ),
     },
-    { key: "createdAt", header: "Created" },
+    { key: "createdAt", header: "Created", sortValue: (e) => Date.parse(e.createdAt) || 0 },
     {
       key: "actions",
       header: "Actions",
