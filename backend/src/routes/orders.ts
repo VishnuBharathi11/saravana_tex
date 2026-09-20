@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { requireAuth } from '../middleware/auth';
 import { canAccessRecord, getEmployeeScope } from '../middleware/authorization';
 import type { AuthenticatedEmployee } from '../services/auth.service';
-import { createOrder, getOrderWithCustomer, replaceOrderItems, type OrderRecord } from '../services/order.service';
+import { createOrder, dbOrderStatus, getOrderWithCustomer, replaceOrderItems, type OrderRecord } from '../services/order.service';
 import { createOrderSchema, updateOrderSchema } from '../schemas/order.schema';
 
 type Bindings = { saravana_traders_db: D1Database };
@@ -48,7 +48,7 @@ orders.patch('/:id', async (c) => {
   let employeeId = existing.employee_id;
   if (employee.role === 'Admin' && data.employeeId !== undefined) { const assigned = await db.prepare(`SELECT id FROM employees WHERE id = ? AND status = 'Active' LIMIT 1`).bind(data.employeeId).first<{ id: string }>(); if (!assigned) return c.json({ success: false, message: 'Assigned employee not found or inactive' }, 400); employeeId = assigned.id; }
   const items = data.items?.length ? data.items : null; const legacy = items?.[0];
-  const updated = { invoiceNumber: data.invoiceNumber ?? existing.invoice_number, material: legacy?.material ?? data.material ?? existing.material, materialType: legacy?.materialType ?? data.materialType ?? existing.material_type, quantity: legacy?.quantity ?? data.quantity ?? existing.quantity, units: legacy?.units ?? data.units ?? existing.units, price: legacy?.price ?? data.price ?? existing.price, paymentStatus: data.paymentStatus ?? existing.payment_status, status: data.status ?? existing.status, deliveryDate: data.deliveryDate ?? existing.delivery_date, address: data.address ?? existing.address, notes: data.notes ?? existing.notes };
+  const updated = { invoiceNumber: data.invoiceNumber ?? existing.invoice_number, material: legacy?.material ?? data.material ?? existing.material, materialType: legacy?.materialType ?? data.materialType ?? existing.material_type, quantity: legacy?.quantity ?? data.quantity ?? existing.quantity, units: legacy?.units ?? data.units ?? existing.units, price: legacy?.price ?? data.price ?? existing.price, paymentStatus: data.paymentStatus ?? existing.payment_status, status: data.status !== undefined ? dbOrderStatus(data.status) : existing.status, deliveryDate: data.deliveryDate ?? existing.delivery_date, address: data.address ?? existing.address, notes: data.notes ?? existing.notes };
   try {
     await db.prepare(`UPDATE orders SET invoice_number = ?, customer_id = ?, material = ?, material_type = ?, quantity = ?, units = ?, price = ?, payment_status = ?, status = ?, employee_id = ?, delivery_date = ?, address = ?, notes = ? WHERE id = ?`).bind(updated.invoiceNumber, customerId, updated.material, updated.materialType, updated.quantity, updated.units, updated.price, updated.paymentStatus, updated.status, employeeId, updated.deliveryDate, updated.address, updated.notes, id).run();
     if (items) await replaceOrderItems(db, id, items);
