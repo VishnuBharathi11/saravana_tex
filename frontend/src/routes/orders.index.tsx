@@ -63,7 +63,7 @@ function OrderStatusSelect({ order }: { order: Order }) {
         className="h-auto w-fit min-w-0 gap-1 rounded-full border-0 bg-transparent p-0 shadow-none focus:ring-0"
         onClick={(event) => event.stopPropagation()}
       >
-        <StatusChip value={value} className={mutation.isPending ? "opacity-60" : undefined} />
+        <StatusChip value={value} className={mutation.isPending ? "opacity-60" : ""} />
       </SelectTrigger>
       <SelectContent>
         {ORDER_STATUSES.map((status) => (
