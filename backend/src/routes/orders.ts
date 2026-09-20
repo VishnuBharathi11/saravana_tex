@@ -62,6 +62,11 @@ orders.delete('/:id', async (c) => {
   const existing = await db.prepare(`SELECT id FROM orders WHERE id = ? LIMIT 1`).bind(id).first<{ id: string }>();
   if (!existing) return c.json({ success: false, message: 'Order not found' }, 404);
   if (!(await canAccessRecord(db, employee, 'Order', id))) return c.json({ success: false, message: 'Access denied' }, 403);
-  await db.prepare(`DELETE FROM orders WHERE id = ?`).bind(id).run(); return c.json({ success: true, message: 'Order deleted successfully' });
+  await db.batch([
+    db.prepare(`DELETE FROM follow_ups WHERE related_type = 'Order' AND related_id = ?`).bind(id),
+    db.prepare(`DELETE FROM access_permissions WHERE resource_type = 'Order' AND resource_id = ?`).bind(id),
+    db.prepare(`DELETE FROM orders WHERE id = ?`).bind(id),
+  ]);
+  return c.json({ success: true, message: 'Order deleted successfully' });
 });
 export default orders;
