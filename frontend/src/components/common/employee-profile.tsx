@@ -15,6 +15,7 @@ import { getOrders } from "@/api/orders";
 import { getFollowUps } from "@/api/followups";
 import { toast } from "sonner";
 import type { Employee } from "@/types";
+import { formatDate, formatDateTime, formatTime } from "@/lib/date-time";
 
 const inr = (value: number) => `₹${value.toLocaleString("en-IN")}`;
 
@@ -326,7 +327,7 @@ function EmployeeWorkload({ employee }: { employee: Employee }) {
                           <div className="min-w-0">
                             <p className="truncate font-medium">{f.title}</p>
                             <p className="truncate text-xs text-muted-foreground">
-                              {f.date} {f.time} · {f.relatedName}
+                              {formatDate(f.date)} {formatTime(f.time)} · {f.relatedName}
                             </p>
                           </div>
                           <StatusChip value={f.status} className="w-fit" />
@@ -401,7 +402,7 @@ function EmployeeWorkload({ employee }: { employee: Employee }) {
                           {o.invoiceNumber} · {o.customerName}
                         </p>
                         <p className="truncate text-xs text-muted-foreground">
-                          {o.material} · {inr(o.value)} · {o.createdAt}
+                          {o.material} · {inr(o.value)} · {formatDateTime(o.createdAt)}
                         </p>
                       </div>
                       <StatusChip value={o.status} className="w-fit" />
