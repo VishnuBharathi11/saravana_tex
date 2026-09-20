@@ -12,6 +12,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useRequireAuth } from "@/hooks/use-require-auth";
 import { getFollowUps, completeFollowUp, deleteFollowUp } from "@/api/followups";
 import type { FollowUp } from "@/types";
+import { formatDate, formatTime } from "@/lib/date-time";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/follow-ups")({
@@ -96,7 +97,7 @@ function FollowUpsPage() {
                         params: { id: followUp.relatedId },
                       })}
                     >
-                      <td className="px-3 py-3 font-medium">{followUp.title}</td><td className="px-3 py-3">{followUp.relatedName}</td><td className="px-3 py-3 whitespace-nowrap">{followUp.date}</td><td className="px-3 py-3 whitespace-nowrap">{followUp.time}</td><td className="px-3 py-3"><StatusChip value={followUp.priority} /></td><td className="px-3 py-3"><StatusChip value={followUp.status} /></td>
+                      <td className="px-3 py-3 font-medium">{followUp.title}</td><td className="px-3 py-3">{followUp.relatedName}</td><td className="px-3 py-3 whitespace-nowrap">{formatDate(followUp.date)}</td><td className="px-3 py-3 whitespace-nowrap">{formatTime(followUp.time)}</td><td className="px-3 py-3"><StatusChip value={followUp.priority} /></td><td className="px-3 py-3"><StatusChip value={followUp.status} /></td>
                       <td className="px-3 py-3"><div className="flex items-center gap-1">{followUp.status !== "Completed" && <Button variant="ghost" size="icon" title="Complete" onClick={(event) => { event.stopPropagation(); completeMutation.mutate(followUp.id); }}><CheckCircle2 className="size-4" /></Button>}<Button variant="ghost" size="icon" title="Edit" onClick={(event) => { event.stopPropagation(); setEditing(followUp); }}><Pencil className="size-4" /></Button><Button variant="ghost" size="icon" title="Delete" className="text-destructive" onClick={(event) => { event.stopPropagation(); setDeleteTarget(followUp); }}><Trash2 className="size-4" /></Button></div></td>
                     </tr>
                   ))}
