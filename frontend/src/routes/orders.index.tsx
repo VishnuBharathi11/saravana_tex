@@ -151,6 +151,7 @@ function OrdersPage() {
       value: (o) => nameOf(o.employeeId),
       render: (o) => nameOf(o.employeeId),
     },
+    { key: "createdAt", header: "Created", sortValue: (o) => Date.parse(o.createdAt) || 0 },
     { key: "deliveryDate", header: "Delivery" },
     {
       key: "actions",
