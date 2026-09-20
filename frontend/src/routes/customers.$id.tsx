@@ -19,6 +19,7 @@ import { getOrders } from "@/api/orders";
 import { getEmployees } from "@/api/employees";
 import { toast } from "sonner";
 import type { Customer, Order } from "@/types";
+import { formatDate, formatDateTime } from "@/lib/date-time";
 import { canEditRecord, canDeleteRecord } from "@/lib/permissions";
 import { FollowUpFormDialogApi } from "@/components/common/followup-form-dialog-api";
 
@@ -87,7 +88,7 @@ function CustomerDetail() {
           company={customer.company}
           phone={customer.phone}
           email={customer.email}
-          meta={`Customer since ${customer.createdAt} · ${customer.source}`}
+          meta={`Customer since ${formatDateTime(customer.createdAt)} · ${customer.source}`}
           actions={editing ? <><Button className="gap-2 rounded-xl" onClick={save} disabled={updateMutation.isPending}><Save className="size-4" /> {updateMutation.isPending ? "Saving..." : "Save"}</Button><Button variant="ghost" className="gap-2 rounded-xl" onClick={() => { setEditing(false); setDraft(null); }}><X className="size-4" /> Cancel</Button></> : <><Button variant="outline" className="glass-soft gap-2 rounded-xl border-0" onClick={() => { setDraft(customer); setEditing(true); }}><PencilLine className="size-4" /> Edit</Button><Button className="gap-2 rounded-xl" onClick={() => navigate({ to: "/orders/new" })}><Plus className="size-4" /> Create Order</Button><Button variant="outline" className="glass-soft gap-2 rounded-xl border-0" onClick={() => setOpenFollowUp(true)}><CalendarPlus className="size-4" /> Follow-up</Button>{canDeleteRecord(user, customer) && <Button variant="ghost" className="gap-2 rounded-xl text-destructive" onClick={() => setConfirmDelete(true)} disabled={deleteMutation.isPending}><Trash2 className="size-4" /></Button>}</>}
         />
 
@@ -99,7 +100,7 @@ function CustomerDetail() {
           <div className="space-y-3"><div className="glass rounded-2xl p-4"><p className="text-sm font-semibold">Payment summary</p><div className="mt-3 space-y-2"><Field label="Lifetime value" value={inr(customer.totalValue)} /><Field label="Collected" value={inr(paid)} /><Field label="Outstanding" value={inr(due)} /><Field label="Orders placed" value={customer.totalOrders} /></div></div><div className="glass rounded-2xl p-4"><p className="text-sm font-semibold">Feedback</p><p className="mt-2 rounded-xl bg-white/55 px-3 py-2.5 text-sm">{customer.feedback || "No feedback captured yet."}</p></div><div className="glass rounded-2xl p-4"><p className="text-sm font-semibold">Notes</p><p className="mt-2 rounded-xl bg-white/55 px-3 py-2.5 text-sm whitespace-pre-wrap">{customer.notes || "No notes added."}</p></div></div>
         </div>
 
-        <div><p className="mb-2 text-sm font-semibold">Order history</p><DataTable<Order> rows={custOrders} columns={[{ key: "invoiceNumber", header: "Invoice", render: (o) => o.invoiceNumber || o.id },{ key: "material", header: "Material", render: (o) => o.items?.map((i) => i.material).join(", ") || o.material },{ key: "quantity", header: "Qty", render: (o) => o.items?.reduce((sum, i) => sum + i.quantity, 0) ?? o.quantity },{ key: "value", header: "Value", render: (o) => inr(o.value) },{ key: "paymentStatus", header: "Payment", render: (o) => <StatusChip value={o.paymentStatus} /> },{ key: "status", header: "Status", render: (o) => <StatusChip value={o.status} /> },{ key: "createdAt", header: "Created" }]} rowKey={(o) => o.id} onRowClick={(o) => navigate({ to: "/orders/$id", params: { id: o.id } })} pageSize={5} emptyMessage="No orders recorded for this customer yet." /></div>
+        <div><p className="mb-2 text-sm font-semibold">Order history</p><DataTable<Order> rows={custOrders} columns={[{ key: "invoiceNumber", header: "Invoice", render: (o) => o.invoiceNumber || o.id },{ key: "material", header: "Material", render: (o) => o.items?.map((i) => i.material).join(", ") || o.material },{ key: "quantity", header: "Qty", render: (o) => o.items?.reduce((sum, i) => sum + i.quantity, 0) ?? o.quantity },{ key: "value", header: "Value", render: (o) => inr(o.value) },{ key: "paymentStatus", header: "Payment", render: (o) => <StatusChip value={o.paymentStatus} /> },{ key: "status", header: "Status", render: (o) => <StatusChip value={o.status} /> },{ key: "createdAt", header: "Created", render: (o) => formatDateTime(o.createdAt) }]} rowKey={(o) => o.id} onRowClick={(o) => navigate({ to: "/orders/$id", params: { id: o.id } })} pageSize={5} emptyMessage="No orders recorded for this customer yet." /></div>
         <ConfirmDialog open={confirmDelete} onOpenChange={setConfirmDelete} title={`Delete ${customer.name}?`} description="The customer cannot be deleted while orders exist." confirmLabel={deleteMutation.isPending ? "Deleting..." : "Delete customer"} destructive onConfirm={() => deleteMutation.mutate()} />
         <FollowUpFormDialogApi open={openFollowUp} onOpenChange={setOpenFollowUp} target={{ id: customer.id, name: customer.name, type: "Customer" }} />
       </div>
