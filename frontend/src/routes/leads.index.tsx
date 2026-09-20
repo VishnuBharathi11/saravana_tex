@@ -71,7 +71,11 @@ function LeadsPage() {
           .includes(leadSearch.toLowerCase())),
   );
 
-  const orderedLeadRows = [...leadRows].sort((a, b) => (leadPriorityRank[a.status] ?? 3) - (leadPriorityRank[b.status] ?? 3) || b.createdAt.localeCompare(a.createdAt));
+  const orderedLeadRows = [...leadRows].sort((a, b) => {
+    const statusDiff = (leadPriorityRank[a.status] ?? 3) - (leadPriorityRank[b.status] ?? 3);
+    if (statusDiff !== 0) return statusDiff;
+    return (Date.parse(b.createdAt) || 0) - (Date.parse(a.createdAt) || 0);
+  });
 
   const leadColumns: Column<Lead>[] = [
     { key: "avatar", header: "Profile", value: (r) => r.name, render: (r) => <Avatar name={r.name} /> },
@@ -86,7 +90,7 @@ function LeadsPage() {
       render: (r) => employeeName(r.employeeId),
     },
     { key: "status", header: "Status", render: (r) => <StatusChip value={r.status} /> },
-    { key: "createdAt", header: "Created" },
+    { key: "createdAt", header: "Created", sortValue: (r) => Date.parse(r.createdAt) || 0 },
   ];
 
   const leadFilters = [
