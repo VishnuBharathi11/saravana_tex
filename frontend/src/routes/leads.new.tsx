@@ -21,6 +21,7 @@ import { createLead } from "@/api/leads";
 import { createFollowUp } from "@/api/followups";
 import type { CreateLeadInput } from "@/api/leads";
 import type { Lead } from "@/types";
+import { TimePicker } from "@/components/ui/time-picker";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/leads/new")({
