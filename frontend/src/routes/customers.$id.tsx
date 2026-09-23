@@ -58,7 +58,7 @@ function CustomerDetail() {
 
   const deleteMutation = useMutation({
     mutationFn: () => deleteCustomer(id),
-    onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ["customers"] }); queryClient.removeQueries({ queryKey: ["customers", id] }); setConfirmDelete(false); toast.success("Customer deleted"); navigate({ to: "/customers" }); },
+    onSuccess: () => { queryClient.setQueryData<Customer[]>(["customers"], (current) => current?.filter((customer) => customer.id !== id) ?? current); queryClient.removeQueries({ queryKey: ["customers", id] }); setConfirmDelete(false); toast.success("Customer deleted"); navigate({ to: "/customers" }); void queryClient.invalidateQueries({ queryKey: ["customers"] }); void queryClient.invalidateQueries({ queryKey: ["follow-ups"] }); },
     onError: (e) => { setConfirmDelete(false); toast.error(e instanceof Error ? e.message : "Unable to delete customer"); },
   });
 
