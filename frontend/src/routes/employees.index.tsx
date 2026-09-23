@@ -80,11 +80,14 @@ function EmployeesPage() {
   const deleteEmployeeMutation = useMutation({
     mutationFn: ({ id, transferToId }: { id: string; transferToId?: string }) =>
       deleteEmployee(id, transferToId),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["employees"] });
+    onSuccess: (_data, variables) => {
+      queryClient.setQueryData<Employee[]>(["employees"], (current) =>
+        current?.filter((employee) => employee.id !== variables.id) ?? current,
+      );
       toast.success("Employee deleted successfully");
       setEmpToDelete(null);
       setTransferToId("");
+      void queryClient.invalidateQueries({ queryKey: ["employees"] });
     },
     onError: (error) => {
       toast.error(error instanceof Error ? error.message : "Unable to delete employee");
