@@ -18,7 +18,7 @@ export function FollowUpDetailDialog({ detail, onClose }: { detail: FollowUp | n
   const followUpsQuery = useQuery({ queryKey: ["follow-ups"], queryFn: getFollowUps, enabled: Boolean(user && detail) });
   const employeesQuery = useQuery({ queryKey: ["employees"], queryFn: getEmployees, enabled: Boolean(user && detail) });
   const completeMutation = useMutation({ mutationFn: completeFollowUp, onSuccess: async (updated) => { queryClient.setQueryData(["follow-ups", updated.id], updated); await queryClient.invalidateQueries({ queryKey: ["follow-ups"] }); toast.success("Follow-up marked completed"); onClose(); }, onError: (e) => toast.error(e instanceof Error ? e.message : "Unable to complete follow-up") });
-  const deleteMutation = useMutation({ mutationFn: deleteFollowUp, onSuccess: async (_, id) => { queryClient.removeQueries({ queryKey: ["follow-ups", id] }); await queryClient.invalidateQueries({ queryKey: ["follow-ups"] }); toast.success("Follow-up deleted"); onClose(); }, onError: (e) => toast.error(e instanceof Error ? e.message : "Unable to delete follow-up") });
+  const deleteMutation = useMutation({ mutationFn: deleteFollowUp, onSuccess: (_, id) => { queryClient.removeQueries({ queryKey: ["follow-ups", id] }); queryClient.setQueryData<FollowUp[]>(["follow-ups"], (current) => current?.filter((followUp) => followUp.id !== id) ?? current); toast.success("Follow-up deleted"); onClose(); void queryClient.invalidateQueries({ queryKey: ["follow-ups"] }); }, onError: (e) => toast.error(e instanceof Error ? e.message : "Unable to delete follow-up") });
 
   if (!detail || !user) return null;
   const current = detailQuery.data ?? detail;
