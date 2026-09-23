@@ -67,6 +67,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       ready,
       isAdmin: user?.role === "Admin",
       login: async (email, password) => {
+        queryClient.clear();
         const response = await apiLogin(email, password);
         setAuthenticatedUser(response.employee);
       },
