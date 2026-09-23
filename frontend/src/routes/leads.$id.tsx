@@ -111,13 +111,17 @@ function LeadDetail() {
 
   const deleteMutation = useMutation({
     mutationFn: () => deleteLead(id),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["leads"] });
-      await queryClient.invalidateQueries({ queryKey: ["follow-ups"] });
-      await queryClient.invalidateQueries({ queryKey: ["dashboard", "follow-ups"] });
+    onSuccess: () => {
+      queryClient.setQueryData<Lead[]>(["leads"], (current) =>
+        current?.filter((lead) => lead.id !== id) ?? current,
+      );
       queryClient.removeQueries({ queryKey: ["leads", id] });
+      setConfirmDelete(false);
       toast.success("Lead deleted");
       navigate({ to: "/leads" });
+      void queryClient.invalidateQueries({ queryKey: ["leads"] });
+      void queryClient.invalidateQueries({ queryKey: ["follow-ups"] });
+      void queryClient.invalidateQueries({ queryKey: ["dashboard", "follow-ups"] });
     },
     onError: (error) => {
       toast.error(error instanceof Error ? error.message : "Unable to delete lead");
