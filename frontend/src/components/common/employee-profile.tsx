@@ -83,12 +83,16 @@ export function EmployeeProfile({
       about,
     };
 
-    if (onSave) {
-      await onSave(patch);
-      return;
+    try {
+      if (onSave) {
+        await onSave(patch);
+      } else {
+        await updateMutation.mutateAsync(patch);
+      }
+      toast.success("Profile changes saved successfully");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to save profile changes");
     }
-
-    updateMutation.mutate(patch);
   };
 
   return (
@@ -203,8 +207,13 @@ export function EmployeeProfile({
                           className="shrink-0 rounded-xl bg-white/50"
                           disabled={isSaving || password.length < 8}
                           onClick={async () => {
-                            await onPasswordSave(password);
-                            setPassword("");
+                            try {
+                              await onPasswordSave(password);
+                              setPassword("");
+                              toast.success("Password updated successfully");
+                            } catch (error) {
+                              toast.error(error instanceof Error ? error.message : "Unable to update password");
+                            }
                           }}
                         >
                           Set Password
