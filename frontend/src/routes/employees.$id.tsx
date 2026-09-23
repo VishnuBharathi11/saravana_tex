@@ -47,9 +47,6 @@ function EmployeeDetail() {
         current?.map((employee) => (employee.id === updated.id ? updated : employee)) ?? current,
       );
     },
-    onError: (error) => {
-      toast.error(error instanceof Error ? error.message : "Unable to save employee changes");
-    },
   });
 
   if (!user) return null;
