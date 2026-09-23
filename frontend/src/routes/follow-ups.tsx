@@ -44,11 +44,14 @@ function FollowUpsPage() {
 
   const deleteMutation = useMutation({
     mutationFn: deleteFollowUp,
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["follow-ups"] });
-      await queryClient.invalidateQueries({ queryKey: ["dashboard", "follow-ups"] });
+    onSuccess: (_data, id) => {
+      queryClient.setQueryData<FollowUp[]>(["follow-ups"], (current) =>
+        current?.filter((followUp) => followUp.id !== id) ?? current,
+      );
       setDeleteTarget(null);
       toast.success("Follow-up deleted");
+      void queryClient.invalidateQueries({ queryKey: ["follow-ups"] });
+      void queryClient.invalidateQueries({ queryKey: ["dashboard", "follow-ups"] });
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Unable to delete follow-up"),
   });
