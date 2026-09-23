@@ -12,6 +12,7 @@ import {
   logout as apiLogout,
 } from "@/api/auth";
 import type { Employee } from "@/types";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface AuthState {
   user: Employee | null;
@@ -26,6 +27,7 @@ const AuthContext = createContext<AuthState | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUserState] = useState<Employee | null>(null);
   const [ready, setReady] = useState(false);
+  const queryClient = useQueryClient();
 
   const setAuthenticatedUser = (nextUser: Employee | null) => {
     setUserState(nextUser);
@@ -70,13 +72,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       },
       logout: async () => {
         try {
+          await queryClient.cancelQueries();
+          queryClient.clear();
           await apiLogout();
         } finally {
           setAuthenticatedUser(null);
         }
       },
     }),
-    [user, ready],
+    [user, ready, queryClient],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
