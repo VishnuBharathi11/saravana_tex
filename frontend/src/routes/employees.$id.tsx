@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
+import { toast } from "sonner";
 import { AppShell } from "@/components/layout/app-shell";
 import { GlassCard, PageHeader } from "@/components/common/glass";
 import { EmployeeProfile } from "@/components/common/employee-profile";
@@ -45,6 +46,9 @@ function EmployeeDetail() {
       queryClient.setQueryData<Employee[]>(["employees"], (current) =>
         current?.map((employee) => (employee.id === updated.id ? updated : employee)) ?? current,
       );
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "Unable to save employee changes");
     },
   });
 
@@ -96,16 +100,8 @@ function EmployeeDetail() {
           editable={canEdit}
           canManagePassword={user.role === "Admin"}
           isSaving={updateEmployeeMutation.isPending}
-          onSave={async (patch) => {
-            try {
-              await updateEmployeeMutation.mutateAsync(patch);
-            } catch {
-              // The mutation error is surfaced below through the mutation state/toast-free UI.
-            }
-          }}
-          onPasswordSave={async (password) => {
-            await updateEmployeeMutation.mutateAsync({ password });
-          }}
+          onSave={(patch) => updateEmployeeMutation.mutateAsync(patch)}
+          onPasswordSave={(password) => updateEmployeeMutation.mutateAsync({ password })}
         />
         {updateEmployeeMutation.isError && (
           <p className="text-sm text-destructive">
