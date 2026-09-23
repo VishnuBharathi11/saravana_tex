@@ -97,8 +97,8 @@ function EmployeeDetail() {
           editable={canEdit}
           canManagePassword={user.role === "Admin"}
           isSaving={updateEmployeeMutation.isPending}
-          onSave={(patch) => updateEmployeeMutation.mutateAsync(patch)}
-          onPasswordSave={(password) => updateEmployeeMutation.mutateAsync({ password })}
+          onSave={async (patch) => { await updateEmployeeMutation.mutateAsync(patch); }}
+          onPasswordSave={async (password) => { await updateEmployeeMutation.mutateAsync({ password }); }}
         />
         {updateEmployeeMutation.isError && (
           <p className="text-sm text-destructive">
