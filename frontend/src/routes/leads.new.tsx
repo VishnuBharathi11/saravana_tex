@@ -313,12 +313,7 @@ function NewLead() {
               </div>
               <div>
                 <Label>Time</Label>
-                <Input
-                  type="time"
-                  value={followUpTime}
-                  onChange={(e) => setFollowUpTime(e.target.value)}
-                  className="glass-soft h-10 border-0"
-                />
+                <TimePicker value={followUpTime || "10:00"} onChange={setFollowUpTime} />
               </div>
             </div>
           </div>
