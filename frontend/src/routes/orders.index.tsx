@@ -100,11 +100,16 @@ function OrdersPage() {
   });
   const deleteMutation = useMutation({
     mutationFn: (id: string) => deleteOrder(id),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["orders"] });
+    onSuccess: () => {
+      if (deleteTargetId) {
+        queryClient.setQueryData<Order[]>(["orders"], (current) =>
+          current?.filter((order) => order.id !== deleteTargetId) ?? current,
+        );
+      }
       setConfirmDelete(false);
       setDeleteTargetId(null);
       toast.success("Order deleted");
+      void queryClient.invalidateQueries({ queryKey: ["orders"] });
     },
     onError: (e) => {
       setConfirmDelete(false);
