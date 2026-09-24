@@ -23,13 +23,13 @@ export const Route = createFileRoute("/orders/")({
 });
 
 const inr = (v: number) => `₹${v.toLocaleString("en-IN")}`;
-const ORDER_STATUSES: OrderStatus[] = ["Confirmed", "Pending", "Cancel"];
+const ORDER_STATUSES: OrderStatus[] = ["Pending", "Confirmed", "Cancel"];
 const ORDER_STATUS_RANK: Record<string, number> = {
-  Confirmed: 1,
-  Pending: 2,
+  Pending: 1,
+  Confirmed: 2,
   Cancel: 3,
   Cancelled: 3,
-  Draft: 2,
+  Draft: 1,
 };
 
 const displayOrderStatus = (status: string) =>
