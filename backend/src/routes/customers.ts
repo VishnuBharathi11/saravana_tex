@@ -360,6 +360,7 @@ customers.patch("/:id", async (c) => {
         duration = ?,
         notes = ?,
         status = ?,
+        activity_status = ?,
         source = ?,
         feedback = ?
       WHERE id = ?
@@ -376,6 +377,7 @@ customers.patch("/:id", async (c) => {
       updated.duration,
       updated.notes,
       updated.status,
+      updated.status === "Active" ? "Active" : "Inactive",
       updated.source,
       updated.feedback,
       id,
