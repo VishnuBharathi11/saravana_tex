@@ -340,7 +340,7 @@ customers.patch("/:id", async (c) => {
     quantity: data.quantity ?? existing.quantity,
     duration: data.duration ?? existing.duration,
     notes: data.notes ?? existing.notes,
-    status: data.status ?? existing.status,
+    status: existing.status,
     source: data.source ?? existing.source,
     feedback: data.feedback ?? existing.feedback,
   };
@@ -377,7 +377,7 @@ customers.patch("/:id", async (c) => {
       updated.duration,
       updated.notes,
       updated.status,
-      updated.status === "Active" ? "Active" : "Inactive",
+      data.status ?? existing.activity_status,
       updated.source,
       updated.feedback,
       id,
