@@ -32,7 +32,7 @@ export const Route = createFileRoute("/customers/new")({
   component: NewCustomer,
 });
 
-const STATUSES: Customer["status"][] = ["Active", "Dormant", "VIP"];
+const STATUSES: Customer["status"][] = ["Active", "Inactive"];
 
 function NewCustomer() {
   const user = useRequireAuth();
