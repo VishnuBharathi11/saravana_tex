@@ -6,8 +6,7 @@ export async function refreshCustomerActivityStatuses(db: D1Database) {
   await db.prepare(`
     UPDATE customers
     SET activity_status = 'Inactive'
-    WHERE status = 'Active'
-      AND activity_status = 'Active'
+    WHERE activity_status = 'Active'
       AND julianday(created_at) < julianday('now', '-15 days')
       AND NOT EXISTS (
         SELECT 1
@@ -28,7 +27,7 @@ export async function createCustomer(db: D1Database, employee: AuthenticatedEmpl
   let assignedEmployeeId = employee.id;
   if (employee.role === "Admin" && input.employeeId) { const assigned = await db.prepare(`SELECT id FROM employees WHERE id = ? AND status = 'Active' LIMIT 1`).bind(input.employeeId).first<{ id: string }>(); if (!assigned) throw new Error("Assigned employee not found or inactive"); assignedEmployeeId = assigned.id; }
   const id = `CUS-${crypto.randomUUID()}`; const createdAt = new Date().toISOString();
-  await db.prepare(`INSERT INTO customers (id, name, company, phone, email, address, material, units, quantity, duration, notes, employee_id, status, activity_status, source, created_at, feedback) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).bind(id, input.name, input.company, input.phone, input.email, input.address, input.material, input.units, input.quantity, input.duration, input.notes, assignedEmployeeId, input.status, input.status, input.source, createdAt, input.feedback).run();
+  await db.prepare(`INSERT INTO customers (id, name, company, phone, email, address, material, units, quantity, duration, notes, employee_id, status, activity_status, source, created_at, feedback) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).bind(id, input.name, input.company, input.phone, input.email, input.address, input.material, input.units, input.quantity, input.duration, input.notes, assignedEmployeeId, "Active", input.status, input.source, createdAt, input.feedback).run();
   await createNotification(db, { type: "CUSTOMER", title: "New customer created", description: `${input.name} from ${input.company} was added as a new customer.`, targetId: id });
   const row = await db.prepare(`SELECT * FROM customers WHERE id = ? LIMIT 1`).bind(id).first<CustomerRecord>(); if (!row) throw new Error("Customer was created but could not be retrieved"); return toCustomerResponse(row, await getCustomerTotals(db, id));
 }
