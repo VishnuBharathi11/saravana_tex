@@ -28,7 +28,7 @@ export const Route = createFileRoute("/customers/$id")({
   component: CustomerDetail,
 });
 
-const STATUSES: Customer["status"][] = ["Active", "Dormant", "VIP"];
+const STATUSES: Customer["status"][] = ["Active", "Inactive"];
 const UNITS = ["Tons", "Nos", "Bags", "Sheets", "Rolls", "Boxes"];
 const inr = (v: number) => `₹${v.toLocaleString("en-IN")}`;
 
