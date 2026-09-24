@@ -385,7 +385,7 @@ function LeadDetail() {
           </div>
         </div>
 
-        <FollowUpTimeline items={history} target={{ id: lead.id, name: lead.name, type: "Lead" }} />
+        <FollowUpTimeline items={history} target={{ id: lead.id, name: lead.company || lead.name, type: "Lead" }} />
       </div>
 
       <ConfirmDialog
