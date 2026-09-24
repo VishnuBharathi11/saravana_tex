@@ -169,7 +169,7 @@ export function FollowUpFormDialogApi({
     })),
     ...(leadsQuery.data ?? []).map((l: Lead) => ({
       id: l.id,
-      name: l.name,
+      name: l.company || l.name,
       type: "Lead" as const,
     })),
     ...(ordersQuery.data ?? []).map((o: Order) => ({
