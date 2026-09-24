@@ -630,7 +630,7 @@ leads.post("/:id/convert", async (c) => {
       .bind(
         followUpId,
         "Lead converted to customer",
-        `${lead.name} was converted from lead ${lead.id}.`,
+        `${lead.name} from ${lead.company} was converted to a customer.`,
         now.slice(0, 10),
         "09:00",
         lead.employee_id,
