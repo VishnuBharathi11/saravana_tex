@@ -135,6 +135,7 @@ customers.get("/:id", async (c) => {
         notes,
         employee_id,
         status,
+        activity_status,
         source,
         created_at,
         feedback
