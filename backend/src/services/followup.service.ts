@@ -85,20 +85,33 @@ export async function getRelatedName(
   type: "Lead" | "Customer" | "Order",
   id: string,
 ): Promise<string | null> {
-  const table = type === "Lead" ? "leads" : type === "Customer" ? "customers" : "orders";
-  const nameColumn = type === "Order" ? "invoice_number" : "name";
+  if (type === "Order") {
+    const row = await db
+      .prepare(`
+        SELECT invoice_number AS name
+        FROM orders
+        WHERE id = ?
+        LIMIT 1
+      `)
+      .bind(id)
+      .first<{ name: string }>();
+
+    return row?.name ?? null;
+  }
+
+  const table = type === "Lead" ? "leads" : "customers";
 
   const row = await db
     .prepare(`
-      SELECT ${nameColumn} AS name
+      SELECT company, name
       FROM ${table}
       WHERE id = ?
       LIMIT 1
     `)
     .bind(id)
-    .first<{ name: string }>();
+    .first<{ company: string; name: string }>();
 
-  return row?.name ?? null;
+  return row?.company?.trim() || row?.name?.trim() || null;
 }
 
 async function canAccessRelatedRecord(
