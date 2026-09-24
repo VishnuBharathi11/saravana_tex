@@ -24,9 +24,9 @@ import type { Lead, Order, OrderStatus } from "@/types";
 import { formatDate, formatDateTime, formatTime } from "@/lib/date-time";
 export const Route = createFileRoute("/dashboard")({ head: () => ({ meta: [{ title: "Dashboard · Saravana Traders CRM" }, { name: "description", content: "Business overview with orders, customers, leads, revenue and follow-up KPIs." }] }), component: DashboardPage });
 const TODAY = new Date().toISOString().slice(0, 10);
-const ORDER_STATUS_RANK: Record<string, number> = { Confirmed: 1, Pending: 2, Cancel: 3, Cancelled: 3, Draft: 2, Processing: 2, Packed: 2, Dispatched: 2, Delivered: 2 };
+const ORDER_STATUS_RANK: Record<string, number> = { Pending: 1, Confirmed: 2, Cancel: 3, Cancelled: 3, Draft: 1, Processing: 2, Packed: 2, Dispatched: 2, Delivered: 2 };
 const displayOrderStatus = (status: string) => status === "Cancelled" ? "Cancel" : status === "Draft" ? "Pending" : status;
-const ORDER_STATUSES: OrderStatus[] = ["Confirmed", "Pending", "Cancel"];
+const ORDER_STATUSES: OrderStatus[] = ["Pending", "Confirmed", "Cancel"];
 function DashboardPage() {
   const user = useRequireAuth(); const navigate = useNavigate(); const queryClient = useQueryClient(); const [board, setBoard] = useState<"leads" | "converted" | "orders" | "employees">("orders"); const [mobileTab, setMobileTab] = useState<"Upcoming" | "Pending">("Upcoming"); const [confirmDelete, setConfirmDelete] = useState(false); const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null); const [orderStatusFilter, setOrderStatusFilter] = useState("All");
   const summaryQuery = useQuery({ queryKey: ["dashboard", "summary"], queryFn: getDashboardSummary, enabled: Boolean(user) }); const followUpsQuery = useQuery({ queryKey: ["dashboard", "follow-ups"], queryFn: () => getDashboardFollowUps(), enabled: Boolean(user) }); const leadsQuery = useQuery({ queryKey: ["leads"], queryFn: getLeads, enabled: Boolean(user) }); const customersQuery = useQuery({ queryKey: ["customers"], queryFn: getCustomers, enabled: Boolean(user) }); const ordersQuery = useQuery({ queryKey: ["orders"], queryFn: getOrders, enabled: Boolean(user) }); const employeesQuery = useQuery({ queryKey: ["employees"], queryFn: getEmployees, enabled: Boolean(user) });
@@ -82,7 +82,7 @@ function DashboardPage() {
       return (Date.parse(b.createdAt) || 0) - (Date.parse(a.createdAt) || 0);
     });
 }, [board, employees, leads, orderBoard, orders]);
-  const boardColumns: Column<Lead>[] = board === "orders" ? [{ key: "phone", header: "Order ID" }, { key: "name", header: "Customer" }, { key: "company", header: "Company" }, { key: "material", header: "Items" }, { key: "feedback", header: "Status", value: (r) => r.feedback, sortValue: (r) => ({ Confirmed: 1, Pending: 2, Cancel: 3 }[r.feedback] ?? 99), render: (r) => {
+  const boardColumns: Column<Lead>[] = board === "orders" ? [{ key: "phone", header: "Order ID" }, { key: "name", header: "Customer" }, { key: "company", header: "Company" }, { key: "material", header: "Items" }, { key: "feedback", header: "Status", value: (r) => r.feedback, sortValue: (r) => ({ Pending: 1, Confirmed: 2, Cancel: 3 }[r.feedback] ?? 99), render: (r) => {
       const order = orders.find((item) => item.id === r.id);
       if (!order) return <StatusChip value={r.feedback} />;
       return (
