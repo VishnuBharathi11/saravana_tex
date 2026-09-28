@@ -88,15 +88,23 @@ export async function getRelatedName(
   if (type === "Order") {
     const row = await db
       .prepare(`
-        SELECT invoice_number AS name
-        FROM orders
-        WHERE id = ?
+        SELECT
+          o.invoice_number AS invoice_number,
+          c.company AS company,
+          c.name AS customer_name
+        FROM orders o
+        LEFT JOIN customers c ON c.id = o.customer_id
+        WHERE o.id = ?
         LIMIT 1
       `)
       .bind(id)
-      .first<{ name: string }>();
+      .first<{ invoice_number: string; company: string | null; customer_name: string | null }>();
 
-    return row?.name ?? null;
+    const company = row?.company?.trim();
+    const customerName = row?.customer_name?.trim();
+
+    if (company && customerName) return `${company} · ${customerName}`;
+    return company || customerName || row?.invoice_number?.trim() || null;
   }
 
   const table = type === "Lead" ? "leads" : "customers";
@@ -111,7 +119,11 @@ export async function getRelatedName(
     .bind(id)
     .first<{ company: string; name: string }>();
 
-  return row?.company?.trim() || row?.name?.trim() || null;
+  const company = row?.company?.trim();
+  const customerName = row?.name?.trim();
+
+  if (company && customerName) return `${company} · ${customerName}`;
+  return company || customerName || null;
 }
 
 async function canAccessRelatedRecord(
