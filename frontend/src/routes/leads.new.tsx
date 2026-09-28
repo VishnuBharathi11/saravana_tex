@@ -69,7 +69,7 @@ function NewLead() {
   const [form, setForm] = useState<CreateLeadInput>(initialForm);
   const [createdLead, setCreatedLead] = useState<Lead | null>(null);
   const [followUpDate, setFollowUpDate] = useState("");
-  const [followUpTime, setFollowUpTime] = useState("");
+  const [followUpTime, setFollowUpTime] = useState("10:00");
   const [followUpCreated, setFollowUpCreated] = useState(false);
 
   const createMutation = useMutation({
