@@ -20,6 +20,7 @@ export const createLeadSchema = z.object({
     "Converted",
     "Lost",
   ]).default("New"),
+  activityStatus: z.enum(["Active", "Inactive"]).default("Active"),
   source: z.string().trim().max(100).default("Other"),
   feedback: z.string().trim().max(2000).default(""),
   priority: z.enum(["Low", "Medium", "High"]).default("Medium"),
