@@ -20,7 +20,7 @@ import { getEmployees } from "@/api/employees";
 import { createLead } from "@/api/leads";
 import { createFollowUp } from "@/api/followups";
 import type { CreateLeadInput } from "@/api/leads";
-import type { Lead } from "@/types";
+import type { Lead, LeadActivityStatus } from "@/types";
 import { TimePicker } from "@/components/ui/time-picker";
 import { toast } from "sonner";
 
@@ -50,6 +50,7 @@ const initialForm: CreateLeadInput = {
   duration: "",
   notes: "",
   status: "New",
+  activityStatus: "Active",
   source: "Other",
   feedback: "",
   priority: "Medium",
@@ -225,6 +226,23 @@ function NewLead() {
                 <SelectContent>
                   {["High", "Medium", "Low"].map((priority) => (
                     <SelectItem key={priority} value={priority}>{priority}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Status</Label>
+              <Select
+                value={form.activityStatus ?? "Active"}
+                onValueChange={(value) => setField("activityStatus", value as LeadActivityStatus)}
+              >
+                <SelectTrigger className="glass-soft h-10 w-full border-0">
+                  <SelectValue placeholder="Lead status" />
+                </SelectTrigger>
+                <SelectContent>
+                  {["Active", "Inactive"].map((status) => (
+                    <SelectItem key={status} value={status}>{status}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
