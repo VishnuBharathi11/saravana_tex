@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/select";
 import { useRequireAuth } from "@/hooks/use-require-auth";
 import { toast } from "sonner";
-import type { Lead, LeadStatus, Priority } from "@/types";
+import type { Lead, LeadActivityStatus, Priority } from "@/types";
 import { TEXTILE_UNITS } from "@/lib/constants";
 import { formatDateTime } from "@/lib/date-time";
 import { getFollowUps } from "@/api/followups";
@@ -49,14 +49,7 @@ export const Route = createFileRoute("/leads/$id")({
   component: LeadDetail,
 });
 
-const STATUSES: LeadStatus[] = [
-  "New",
-  "Contacted",
-  "Interested",
-  "Negotiation",
-  "Converted",
-  "Lost",
-];
+const STATUSES: LeadActivityStatus[] = ["Active", "Inactive"];
 const UNITS = TEXTILE_UNITS;
 const DURATIONS = ["Immediate", "1 Week", "2 Weeks", "1 Month", "Quarterly"];
 const PRIORITIES: Priority[] = ["High", "Medium", "Low"];
@@ -198,6 +191,7 @@ function LeadDetail() {
       duration: d.duration,
       notes: d.notes,
       status: d.status,
+      activityStatus: d.activityStatus,
       source: d.source,
       feedback: d.feedback,
       priority: d.priority,
@@ -329,7 +323,7 @@ function LeadDetail() {
 
                 <div className="space-y-1.5">
                   <Label>Status</Label>
-                  <Select value={d.status} onValueChange={(v) => upd({ status: v as LeadStatus })}>
+                  <Select value={d.activityStatus} onValueChange={(v) => upd({ activityStatus: v as LeadActivityStatus })}>
                     <SelectTrigger className="h-10 w-full border-0 bg-white/70"><SelectValue /></SelectTrigger>
                     <SelectContent>{STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
                   </Select>
