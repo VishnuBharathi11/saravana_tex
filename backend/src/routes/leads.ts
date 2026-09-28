@@ -73,6 +73,7 @@ leads.get('/', async (c) => {
 		notes: string;
 		employee_id: string;
 		status: string;
+		activity_status: "Active" | "Inactive";
 		source: string;
 		created_at: string;
 		feedback: string;
@@ -108,6 +109,7 @@ leads.get('/', async (c) => {
 		notes: row.notes,
 		employeeId: row.employee_id,
 		status: row.status,
+		activityStatus: row.activity_status,
 		source: row.source,
 		createdAt: row.created_at,
 		feedback: row.feedback,
