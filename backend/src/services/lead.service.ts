@@ -16,6 +16,7 @@ export interface LeadRecord {
   notes: string;
   employee_id: string;
   status: string;
+  activity_status: "Active" | "Inactive";
   source: string;
   created_at: string;
   feedback: string;
@@ -38,6 +39,7 @@ export function toLeadResponse(row: LeadRecord) {
     notes: row.notes,
     employeeId: row.employee_id,
     status: row.status,
+    activityStatus: row.activity_status,
     source: row.source,
     createdAt: row.created_at,
     feedback: row.feedback,
@@ -96,12 +98,13 @@ export async function createLead(
         notes,
         employee_id,
         status,
+        activity_status,
         source,
         created_at,
         feedback,
         priority
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
     )
     .bind(
@@ -117,7 +120,8 @@ export async function createLead(
       input.duration,
       input.notes,
       assignedEmployeeId,
-      input.status,
+      input.status ?? "New",
+      input.activityStatus ?? "Active",
       input.source,
       createdAt,
       input.feedback,
@@ -149,6 +153,7 @@ export async function createLead(
         notes,
         employee_id,
         status,
+        activity_status,
         source,
         created_at,
         feedback,
