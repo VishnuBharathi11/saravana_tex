@@ -149,7 +149,7 @@ function NewCustomer() {
               <Label>Quantity</Label>
               <Input
                 type="number"
-                min={1}
+                min={0}
                 value={d.quantity ?? ""}
                 onChange={(e) =>
                   upd({
