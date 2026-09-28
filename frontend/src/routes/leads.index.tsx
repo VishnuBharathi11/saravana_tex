@@ -61,10 +61,11 @@ function LeadsPage() {
     employees.find((employee) => employee.id === employeeId)?.name ?? "Unassigned";
 
   const leads = leadsQuery.data ?? [];
-  const leadPriorityRank: Record<string, number> = { Converted: 1, New: 2 };
+  const leadPriorityRank: Record<string, number> = { Active: 1, Inactive: 2 };
   const leadRows = leads.filter(
     (r) =>
-      (leadStatus === "All" || r.status === leadStatus) &&
+      r.status !== "Converted" &&
+      (leadStatus === "All" || r.activityStatus === leadStatus) &&
       (leadEmp === "All" || employeeName(r.employeeId) === leadEmp) &&
       (!leadSearch ||
         `${r.name} ${r.company} ${r.phone} ${r.email}`
@@ -73,7 +74,7 @@ function LeadsPage() {
   );
 
   const orderedLeadRows = [...leadRows].sort((a, b) => {
-    const statusDiff = (leadPriorityRank[a.status] ?? 3) - (leadPriorityRank[b.status] ?? 3);
+    const statusDiff = (leadPriorityRank[a.activityStatus] ?? 3) - (leadPriorityRank[b.activityStatus] ?? 3);
     if (statusDiff !== 0) return statusDiff;
     return (Date.parse(b.createdAt) || 0) - (Date.parse(a.createdAt) || 0);
   });
@@ -90,12 +91,12 @@ function LeadsPage() {
       value: (r) => employeeName(r.employeeId),
       render: (r) => employeeName(r.employeeId),
     },
-    { key: "status", header: "Status", render: (r) => <StatusChip value={r.status} /> },
+    { key: "status", header: "Status", render: (r) => <StatusChip value={r.activityStatus} /> },
     { key: "createdAt", header: "Created", sortValue: (r) => Date.parse(r.createdAt) || 0, value: (r) => formatDateTime(r.createdAt), render: (r) => formatDateTime(r.createdAt) },
   ];
 
   const leadFilters = [
-    { label: "Status", options: ["New", "Contacted", "Interested", "Negotiation", "Converted", "Lost"], value: leadStatus, onChange: setLeadStatus },
+    { label: "Status", options: ["Active", "Inactive"], value: leadStatus, onChange: setLeadStatus },
     { label: "Employee", options: employees.map((e) => e.name), value: leadEmp, onChange: setLeadEmp },
   ];
 
