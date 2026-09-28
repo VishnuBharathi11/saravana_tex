@@ -70,11 +70,11 @@ function DashboardPage() {
       .slice()
       .sort((a, b) => (Date.parse(b.createdAt) || 0) - (Date.parse(a.createdAt) || 0));
   }
-  if (board === "orders") return orderBoard.map<Lead>((o) => ({ id: o.id, name: o.customerName, company: o.company, phone: o.id, email: "", address: o.address, material: o.items?.map((i) => i.material).join(", ") || o.material, units: o.units, quantity: o.items?.length || 1, duration: o.deliveryDate, notes: o.notes, employeeId: o.employeeId, status: "Converted", source: "Order", createdAt: o.createdAt, feedback: displayOrderStatus(o.status), priority: "Medium" })); if (board === "employees") return employees
+  if (board === "orders") return orderBoard.map<Lead>((o) => ({ id: o.id, name: o.customerName, company: o.company, phone: o.id, email: "", address: o.address, material: o.items?.map((i) => i.material).join(", ") || o.material, units: o.units, quantity: o.items?.length || 1, duration: o.deliveryDate, notes: o.notes, employeeId: o.employeeId, status: "New", activityStatus: "Active", source: "Order", createdAt: o.createdAt, feedback: displayOrderStatus(o.status), priority: "Medium" })); if (board === "employees") return employees
     .slice()
     .sort((a, b) => (Date.parse(b.createdAt) || 0) - (Date.parse(a.createdAt) || 0))
     .slice(0, 25)
-    .map<Lead>((e) => ({ id: e.id, name: e.name, company: e.designation, phone: e.phone, email: e.email, address: "—", material: "—", units: "—", quantity: leads.filter((l) => l.employeeId === e.id).length, duration: e.status, notes: "", employeeId: e.id, status: "New", source: e.role, createdAt: e.createdAt, feedback: `${orders.filter((o) => o.employeeId === e.id).length} orders handled`, priority: "Medium" })); return leads
+    .map<Lead>((e) => ({ id: e.id, name: e.name, company: e.designation, phone: e.phone, email: e.email, address: "—", material: "—", units: "—", quantity: leads.filter((l) => l.employeeId === e.id).length, duration: e.status, notes: "", employeeId: e.id, status: "New", activityStatus: "Active", source: e.role, createdAt: e.createdAt, feedback: `${orders.filter((o) => o.employeeId === e.id).length} orders handled`, priority: "Medium" })); return leads
     .slice()
     .sort((a, b) => {
       const statusDiff = (leadStatusRank[a.status] ?? 3) - (leadStatusRank[b.status] ?? 3);
