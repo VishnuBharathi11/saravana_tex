@@ -12,19 +12,19 @@ interface ApiMessageResponse {
 }
 
 export interface CreateCustomerInput {
-  name: string;
-  company: string;
-  phone: string;
-  email: string;
-  address: string;
-  material: string;
-  units: string;
-  quantity: number;
-  duration: string;
+  name?: string;
+  company?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  material?: string;
+  units?: string;
+  quantity?: number;
+  duration?: string;
   notes?: string;
   employeeId?: string;
   status?: Customer["status"];
-  source: string;
+  source?: string;
   feedback?: string;
 }
 
