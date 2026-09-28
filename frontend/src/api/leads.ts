@@ -1,4 +1,4 @@
-import type { Lead, LeadStatus } from "@/types";
+import type { Lead, LeadActivityStatus, LeadStatus } from "@/types";
 import { apiRequest } from "./client";
 
 interface ApiDataResponse<T> {
@@ -24,6 +24,7 @@ export interface CreateLeadInput {
   notes?: string;
   employeeId?: string;
   status?: LeadStatus;
+  activityStatus?: LeadActivityStatus;
   source: string;
   feedback?: string;
   priority: "Low" | "Medium" | "High";
