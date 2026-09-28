@@ -47,6 +47,7 @@ leads.get('/', async (c) => {
         notes,
         employee_id,
         status,
+        activity_status,
         source,
         created_at,
         feedback,
@@ -205,6 +206,7 @@ leads.get("/:id", async (c) => {
         notes,
         employee_id,
         status,
+        activity_status,
         source,
         created_at,
         feedback,
@@ -332,7 +334,8 @@ leads.patch("/:id", async (c) => {
     quantity: data.quantity ?? existing.quantity,
     duration: data.duration ?? existing.duration,
     notes: data.notes ?? existing.notes,
-    status: data.status ?? existing.status,
+    status: existing.status,
+    activity_status: data.activityStatus ?? existing.activity_status,
     source: data.source ?? existing.source,
     feedback: data.feedback ?? existing.feedback,
     priority: data.priority ?? existing.priority,
@@ -353,6 +356,7 @@ leads.patch("/:id", async (c) => {
         duration = ?,
         notes = ?,
         status = ?,
+        activity_status = ?,
         source = ?,
         feedback = ?,
         priority = ?
@@ -370,6 +374,7 @@ leads.patch("/:id", async (c) => {
       updated.duration,
       updated.notes,
       updated.status,
+      updated.activity_status,
       updated.source,
       updated.feedback,
       updated.priority,
@@ -393,6 +398,7 @@ leads.patch("/:id", async (c) => {
         notes,
         employee_id,
         status,
+        activity_status,
         source,
         created_at,
         feedback,
@@ -594,6 +600,7 @@ leads.post("/:id/convert", async (c) => {
         UPDATE leads
         SET
           status = 'Converted',
+          activity_status = 'Inactive',
           converted_customer_id = ?
         WHERE id = ?
       `)
