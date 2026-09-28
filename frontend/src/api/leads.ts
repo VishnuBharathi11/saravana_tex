@@ -44,6 +44,7 @@ export type UpdateLeadInput = Partial<
     | "duration"
     | "notes"
     | "status"
+    | "activityStatus"
     | "source"
     | "feedback"
     | "priority"
