@@ -1,19 +1,19 @@
 import { z } from "zod";
 
 export const createCustomerSchema = z.object({
-  name: z.string().trim().min(1).max(150),
-  company: z.string().trim().min(1).max(200),
-  phone: z.string().trim().min(5).max(30),
-  email: z.string().trim().email().max(254),
-  address: z.string().trim().min(1).max(500),
-  material: z.string().trim().min(1).max(100),
-  units: z.string().trim().min(1).max(50),
-  quantity: z.number().int().positive(),
-  duration: z.string().trim().min(1).max(50),
+  name: z.string().trim().max(150).default("Unnamed customer"),
+  company: z.string().trim().max(200).default("Unknown company"),
+  phone: z.string().trim().max(30).default(""),
+  email: z.string().trim().email().or(z.literal("")).default(""),
+  address: z.string().trim().max(500).default(""),
+  material: z.string().trim().max(100).default("Not specified"),
+  units: z.string().trim().max(50).default("N/A"),
+  quantity: z.number().int().nonnegative().default(0),
+  duration: z.string().trim().max(50).default("Not specified"),
   notes: z.string().trim().max(2000).default(""),
   employeeId: z.string().trim().min(1).optional(),
   status: z.enum(["Active", "Inactive"]).default("Active"),
-  source: z.string().trim().min(1).max(100),
+  source: z.string().trim().max(100).default("Other"),
   feedback: z.string().trim().max(2000).default(""),
 });
 
