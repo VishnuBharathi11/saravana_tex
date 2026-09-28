@@ -76,41 +76,24 @@ function NewCustomer() {
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (
-      !d.name?.trim() ||
-      !d.company?.trim() ||
-      !d.phone?.trim() ||
-      !d.email?.trim() ||
-      !d.address?.trim() ||
-      !d.material?.trim() ||
-      !d.units ||
-      !d.quantity ||
-      d.quantity <= 0 ||
-      !d.duration?.trim() ||
-      !d.source?.trim()
-    ) {
-      toast.error("Complete all required customer fields");
-      return;
-    }
-
     mutation.mutate({
-  name: d.name.trim(),
-  company: d.company.trim(),
-  phone: d.phone.trim(),
-  email: d.email.trim(),
-  address: d.address.trim(),
-  material: d.material.trim(),
-  units: d.units,
-  quantity: d.quantity,
-  duration: d.duration.trim(),
-  notes: d.notes?.trim() ?? "",
-  status: d.status ?? "Active",
-  source: d.source.trim(),
-  feedback: d.feedback?.trim() ?? "",
-  ...(user.role === "Admin" && d.employeeId
-    ? { employeeId: d.employeeId }
-    : {}),
-});
+      name: d.name?.trim() || "Unnamed customer",
+      company: d.company?.trim() || "Unknown company",
+      phone: d.phone?.trim() ?? "",
+      email: d.email?.trim() ?? "",
+      address: d.address?.trim() ?? "",
+      material: d.material?.trim() || "Not specified",
+      units: d.units || "N/A",
+      quantity: d.quantity ?? 0,
+      duration: d.duration?.trim() || "Not specified",
+      notes: d.notes?.trim() ?? "",
+      status: d.status ?? "Active",
+      source: d.source?.trim() || "Other",
+      feedback: d.feedback?.trim() ?? "",
+      ...(user.role === "Admin" && d.employeeId
+        ? { employeeId: d.employeeId }
+        : {}),
+    });
   };
 
   const employees = employeesQuery.data ?? [];
@@ -158,8 +141,7 @@ function NewCustomer() {
                     } as Partial<CreateCustomerInput>)
                   }
                   className="glass-soft h-10 border-0"
-                  required
-                />
+                  />
               </div>
             ))}
 
@@ -175,7 +157,6 @@ function NewCustomer() {
                   })
                 }
                 className="glass-soft h-10 border-0"
-                required
               />
             </div>
 
@@ -255,7 +236,6 @@ function NewCustomer() {
                   upd({ address: e.target.value })
                 }
                 className="glass-soft h-10 border-0"
-                required
               />
             </div>
 
