@@ -21,6 +21,7 @@ export function StatCard({
   suffix = "",
   hint,
   delay = 0,
+  onClick,
 }: {
   label: string;
   value: number;
@@ -30,12 +31,14 @@ export function StatCard({
   suffix?: string;
   hint?: string;
   delay?: number;
+  onClick?: () => void;
 }) {
   const n = useCountUp(value);
   return (
     <div
-      className="glass lift page-enter rounded-2xl p-4 sm:p-5"
+      className={cn("glass lift page-enter rounded-2xl p-4 sm:p-5", onClick && "cursor-pointer")}
       style={{ animationDelay: `${delay}ms` }}
+      onClick={onClick}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
