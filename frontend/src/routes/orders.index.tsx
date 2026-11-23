@@ -6,7 +6,6 @@ import { Building2, CalendarDays, ChevronDown, MoreHorizontal, Package, Plus, Se
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/common/glass";
 import { StatusChip } from "@/components/common/status-chip";
-import { DataTable, type Column } from "@/components/common/data-table";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -344,8 +343,9 @@ function OrdersPage() {
           </div>
         ) : (
           <>
-          <div className="md:hidden space-y-3">
+          <div className="space-y-3">
             <div className="glass rounded-2xl p-3">
+
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
@@ -406,6 +406,7 @@ function OrdersPage() {
               </div>
             </div>
 
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {mobileVisibleRows.map((order) => (
               <OrderMobileCard
                 key={order.id}
@@ -417,6 +418,7 @@ function OrdersPage() {
                 }}
               />
             ))}
+            </div>
 
             {mobileVisibleRows.length === 0 && (
               <div className="glass rounded-2xl p-8 text-center text-sm text-muted-foreground">
@@ -437,19 +439,7 @@ function OrdersPage() {
             </div>
           </div>
 
-          <div className="hidden md:block">
-            <DataTable
-              rows={orderedRows}
-              columns={columns}
-              rowKey={(o) => o.id}
-              searchPlaceholder="Search orders by order ID, customer, item…"
-              onRowClick={(o) => navigate({ to: "/orders/$id", params: { id: o.id } })}
-              filters={[
-                { label: "Employee", options: employees.map((e) => e.name), value: emp, onChange: setEmp },
-                { label: "Status", options: ORDER_STATUSES, value: status, onChange: setStatus },
-              ]}
-            />
-          </div>
+
           </>
         )}
       </div>
