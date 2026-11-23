@@ -15,7 +15,6 @@ import { getOrders, deleteOrder, updateOrder } from "@/api/orders";
 import { getEmployees } from "@/api/employees";
 import { toast } from "sonner";
 import type { Order, OrderStatus } from "@/types";
-import { formatDateTime } from "@/lib/date-time";
 
 export const Route = createFileRoute("/orders/")({
   head: () => ({ meta: [{ title: "Orders · Saravana Traders CRM" }] }),
@@ -138,6 +137,7 @@ function OrdersPage() {
   const columns: Column<Order>[] = [
     { key: "id", header: "Order ID", render: (o) => <span className="font-medium">{o.id}</span> },
     { key: "customerName", header: "Customer" },
+    { key: "company", header: "Company" },
     {
       key: "items",
       header: "Items",
@@ -151,13 +151,6 @@ function OrdersPage() {
       value: (o) => displayOrderStatus(o.status),
       render: (o) => <OrderStatusSelect order={o} />,
     },
-    {
-      key: "employeeId",
-      header: "Assigned Employee",
-      value: (o) => nameOf(o.employeeId),
-      render: (o) => nameOf(o.employeeId),
-    },
-    { key: "createdAt", header: "Created", sortValue: (o) => Date.parse(o.createdAt) || 0, render: (o) => formatDateTime(o.createdAt) },
     { key: "deliveryDate", header: "Delivery" },
     {
       key: "actions",
