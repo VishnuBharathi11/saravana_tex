@@ -270,44 +270,6 @@ function OrdersPage() {
     mobileCurrentPage * mobilePageSize + mobilePageSize,
   );
 
-  const columns: Column<Order>[] = [
-    { key: "id", header: "Order ID", render: (o) => <span className="font-medium">{o.id}</span> },
-    { key: "customerName", header: "Customer" },
-    { key: "company", header: "Company" },
-    {
-      key: "items",
-      header: "Items",
-      render: (o) => o.items?.map((i) => i.material).join(", ") || o.material,
-    },
-    { key: "quantity", header: "Lines", render: (o) => String(o.items?.length || 1) },
-    { key: "value", header: "Value", render: (o) => inr(o.value) },
-    {
-      key: "status",
-      header: "Status",
-      value: (o) => displayOrderStatus(o.status),
-      render: (o) => <OrderStatusSelect order={o} />,
-    },
-    { key: "deliveryDate", header: "Delivery" },
-    {
-      key: "actions",
-      header: "",
-      render: (o) => (
-        <Button
-          variant="ghost"
-          size="icon"
-          className="text-destructive"
-          onClick={(e) => {
-            e.stopPropagation();
-            setDeleteTargetId(o.id);
-            setConfirmDelete(true);
-          }}
-        >
-          <Trash2 className="size-4" />
-        </Button>
-      ),
-    },
-  ];
-
   const error = ordersQuery.error ?? employeesQuery.error;
 
   return (
