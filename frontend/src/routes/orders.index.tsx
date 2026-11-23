@@ -343,6 +343,7 @@ function OrdersPage() {
             {orders.length === 0 ? "No orders found." : "No orders match the current filters."}
           </div>
         ) : (
+          <>
           <div className="md:hidden space-y-3">
             <div className="glass rounded-2xl p-3">
               <div className="relative">
@@ -449,6 +450,7 @@ function OrdersPage() {
               ]}
             />
           </div>
+          </>
         )}
       </div>
       <ConfirmDialog
