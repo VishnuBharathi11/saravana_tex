@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Building2, CalendarDays, ChevronDown, Mail, Phone, Plus, Search, Users } from "lucide-react";
+import { Building2, CalendarDays, ChevronDown, Phone, Plus, Search, Users } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/common/glass";
 import { StatusChip } from "@/components/common/status-chip";
@@ -18,7 +18,7 @@ import { useRequireAuth } from "@/hooks/use-require-auth";
 import { getEmployees } from "@/api/employees";
 import { getLeads } from "@/api/leads";
 import type { Lead } from "@/types";
-import { formatDateTime } from "@/lib/date-time";
+import { formatDate, formatTime } from "@/lib/date-time";
 export const Route = createFileRoute("/leads/")({
   head: () => ({
     meta: [
@@ -46,7 +46,7 @@ function LeadCard({
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2">
           <span className="h-8 w-1 rounded-full bg-primary" />
-          <p className="truncate text-lg font-bold">{lead.name || "Unnamed lead"}</p>
+          <p className="truncate text-lg font-bold">{lead.company || "Unknown company"}</p>
         </div>
         <StatusChip value={lead.activityStatus} />
       </div>
@@ -54,21 +54,15 @@ function LeadCard({
       <div className="mt-4 space-y-2.5">
         <div className="grid grid-cols-[24px_92px_12px_minmax(0,1fr)] items-center gap-1 text-sm">
           <Building2 className="size-4 text-muted-foreground" />
-          <span className="text-muted-foreground">Company</span>
+          <span className="text-muted-foreground">Person</span>
           <span className="text-muted-foreground">:</span>
-          <span className="truncate font-semibold">{lead.company || "—"}</span>
+          <span className="truncate font-semibold">{lead.name || "—"}</span>
         </div>
         <div className="grid grid-cols-[24px_92px_12px_minmax(0,1fr)] items-center gap-1 text-sm">
           <Phone className="size-4 text-muted-foreground" />
           <span className="text-muted-foreground">Phone</span>
           <span className="text-muted-foreground">:</span>
           <span className="truncate font-semibold">{lead.phone || "—"}</span>
-        </div>
-        <div className="grid grid-cols-[24px_92px_12px_minmax(0,1fr)] items-center gap-1 text-sm">
-          <Mail className="size-4 text-muted-foreground" />
-          <span className="text-muted-foreground">Email</span>
-          <span className="text-muted-foreground">:</span>
-          <span className="truncate font-semibold">{lead.email || "—"}</span>
         </div>
       </div>
 
@@ -80,12 +74,15 @@ function LeadCard({
           </div>
           <p className="mt-1 truncate text-sm font-semibold">{employeeName(lead.employeeId)}</p>
         </div>
-        <div className="px-3">
+        <div className="min-w-0 px-3">
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <CalendarDays className="size-4" />
             <span>Created</span>
           </div>
-          <p className="mt-1 truncate text-sm font-semibold">{formatDateTime(lead.createdAt)}</p>
+          <div className="mt-1 text-sm font-semibold leading-5">
+            <p>{formatDate(lead.createdAt)}</p>
+            <p className="text-muted-foreground">{formatTime(new Date(lead.createdAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false }))}</p>
+          </div>
         </div>
       </div>
     </article>
