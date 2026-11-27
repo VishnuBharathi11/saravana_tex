@@ -19,6 +19,17 @@ import { getEmployees } from "@/api/employees";
 import { getLeads } from "@/api/leads";
 import type { Lead } from "@/types";
 import { formatDate, formatTime } from "@/lib/date-time";
+
+function formatCreatedTime(value: string): string {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return "—";
+  return new Intl.DateTimeFormat("en-IN", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+    timeZone: "Asia/Kolkata",
+  }).format(parsed);
+}
 export const Route = createFileRoute("/leads/")({
   head: () => ({
     meta: [
@@ -81,7 +92,7 @@ function LeadCard({
           </div>
           <div className="mt-1 text-sm font-semibold leading-5">
             <p>{formatDate(lead.createdAt)}</p>
-            <p className="text-muted-foreground">{formatTime(new Date(lead.createdAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false }))}</p>
+            <p className="text-muted-foreground">{formatCreatedTime(lead.createdAt)}</p>
           </div>
         </div>
       </div>
