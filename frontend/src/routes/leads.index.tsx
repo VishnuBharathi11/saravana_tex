@@ -169,16 +169,6 @@ function LeadsPage() {
         />
 
         <div className="m-0 space-y-4">
-          <div className="relative max-w-md">
-            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Search leads by name, company, phone, email..."
-              value={leadSearch}
-              onChange={(e) => setLeadSearch(e.target.value)}
-              className="pl-9 h-10 bg-white/70"
-            />
-          </div>
-
           {leadsQuery.isPending ? (
             <div className="glass rounded-2xl p-8 text-center text-sm text-muted-foreground">
               Loading leads...
